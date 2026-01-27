@@ -13,10 +13,10 @@ export const DEFAULT_CATEGORIES: Category[] = [
 ];
 
 export const DEFAULT_ACCOUNTS: Account[] = [
-  { id: 'a1', name: 'Готівка', currency: Currency.UAH, initialBalance: 0, color: '#10b981', type: AccountType.CURRENT, currentRate: 1 },
-  { id: 'a2', name: 'ПриватБанк', currency: Currency.UAH, initialBalance: 0, color: '#22c55e', type: AccountType.CURRENT, currentRate: 1 },
-  { id: 'a3', name: 'Mono White', currency: Currency.UAH, initialBalance: 0, color: '#000000', type: AccountType.CURRENT, currentRate: 1 },
-  { id: 'a4', name: 'Готівка USD', currency: Currency.USD, initialBalance: 0, color: '#16a34a', type: AccountType.SAVINGS, currentRate: 41.5 },
+  { id: 'a1', name: 'Готівка', currency: Currency.UAH, initialBalance: 0, color: '#10b981', icon: 'wallet', type: AccountType.CURRENT, currentRate: 1 },
+  { id: 'a2', name: 'ПриватБанк', currency: Currency.UAH, initialBalance: 0, color: '#22c55e', icon: 'credit-card', type: AccountType.CURRENT, currentRate: 1 },
+  { id: 'a3', name: 'Mono White', currency: Currency.UAH, initialBalance: 0, color: '#000000', icon: 'credit-card', type: AccountType.CURRENT, currentRate: 1 },
+  { id: 'a4', name: 'Готівка USD', currency: Currency.USD, initialBalance: 0, color: '#16a34a', icon: 'banknote', type: AccountType.SAVINGS, currentRate: 41.5 },
 ];
 
 export const INITIAL_DATA: AppData = {

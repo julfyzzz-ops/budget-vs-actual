@@ -13,7 +13,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const periodLabel = useMemo(() => {
-    return currentDate.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' });
+    return currentDate.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
   }, [currentDate]);
 
   const prevMonth = () => {

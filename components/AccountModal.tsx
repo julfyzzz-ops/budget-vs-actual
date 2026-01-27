@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { Account, AccountType, Currency } from '../types';
 import { Button } from './ui/Button';
 import { X } from 'lucide-react';
+import { CategoryIcon } from './CategoryIcon';
 
 interface AccountModalProps {
   isOpen: boolean;
@@ -11,6 +13,7 @@ interface AccountModalProps {
 }
 
 const COLORS = ['#10b981', '#3b82f6', '#ef4444', '#f97316', '#8b5cf6', '#ec4899', '#000000', '#6b7280'];
+const ACCOUNT_ICONS = ['wallet', 'credit-card', 'banknote', 'landmark', 'piggy-bank', 'coins', 'vault', 'briefcase'];
 
 export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
   const [name, setName] = useState('');
@@ -18,6 +21,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
   const [initialBalance, setInitialBalance] = useState('0');
   const [type, setType] = useState<AccountType>(AccountType.CURRENT);
   const [color, setColor] = useState(COLORS[0]);
+  const [icon, setIcon] = useState('wallet');
   const [currentRate, setCurrentRate] = useState('1');
 
   useEffect(() => {
@@ -27,6 +31,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
       setInitialBalance(initialData.initialBalance.toString());
       setType(initialData.type || AccountType.CURRENT);
       setColor(initialData.color);
+      setIcon(initialData.icon || 'wallet');
       setCurrentRate(initialData.currentRate?.toString() || '1');
     } else {
       resetForm();
@@ -39,6 +44,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
     setInitialBalance('0');
     setType(AccountType.CURRENT);
     setColor(COLORS[0]);
+    setIcon('wallet');
     setCurrentRate('1');
   };
 
@@ -50,6 +56,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
       initialBalance: parseFloat(initialBalance),
       type,
       color,
+      icon,
       currentRate: parseFloat(currentRate)
     };
 
@@ -137,6 +144,22 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
                   className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                 />
              </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Іконка</label>
+            <div className="flex flex-wrap gap-3">
+              {ACCOUNT_ICONS.map((iconKey) => (
+                <button
+                  key={iconKey}
+                  type="button"
+                  onClick={() => setIcon(iconKey)}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${icon === iconKey ? 'bg-emerald-50 text-primary ring-2 ring-primary' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+                >
+                  <CategoryIcon iconName={iconKey} size={20} />
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>

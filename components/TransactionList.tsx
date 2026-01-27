@@ -42,20 +42,29 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     return date.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
   };
 
-  if (transactions.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8 text-center">
-        <Search size={48} className="mb-4 opacity-20" />
-        <p>Немає транзакцій. Додайте першу запис!</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="pb-24 pt-4 px-4 space-y-4 min-h-full relative">
+    <div className="pb-24 pt-4 px-4 space-y-4 min-h-full relative w-full">
+      {/* Header Toolbar */}
+      <div className="flex justify-between items-center mb-2">
+         <h2 className="text-lg font-bold text-gray-800">Історія</h2>
+         <button
+          onClick={() => setIsEditMode(!isEditMode)}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 transition-all ${isEditMode ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}`}
+        >
+            {isEditMode ? <><LockOpen size={14} /> Редагування</> : <><Lock size={14} /> Тільки перегляд</>}
+        </button>
+      </div>
+
+      {transactions.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400 text-center">
+            <Search size={48} className="mb-4 opacity-20" />
+            <p>Немає транзакцій. Додайте першу запис!</p>
+          </div>
+      )}
+
       {Object.entries(grouped).map(([date, items]) => (
         <div key={date} className="animate-fade-in">
-          <div className="flex items-center gap-2 mb-2 sticky top-0 bg-background/95 backdrop-blur py-2 z-10">
+          <div className="flex items-center gap-2 mb-2 sticky top-0 bg-gray-50 py-2 z-10">
             <Calendar size={14} className="text-gray-500" />
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
               {formatDate(date)}
@@ -161,16 +170,6 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           </div>
         </div>
       ))}
-
-      {/* Lock Button - Fixed Bottom Left */}
-      <div className="fixed bottom-20 left-4 z-30">
-        <button
-          onClick={() => setIsEditMode(!isEditMode)}
-          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all ${isEditMode ? 'bg-orange-500 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-        >
-            {isEditMode ? <LockOpen size={20} /> : <Lock size={20} />}
-        </button>
-      </div>
     </div>
   );
 };

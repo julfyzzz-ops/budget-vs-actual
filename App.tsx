@@ -45,11 +45,26 @@ export default function App() {
   // Load data on mount
   useEffect(() => {
     const loaded = loadFromStorage();
-    // Migration for legacy data if needed (ensure accounts have types)
-    if (loaded.accounts && !loaded.accounts[0]?.type) {
-       // @ts-ignore
-       loaded.accounts = loaded.accounts.map(a => ({...a, type: 'CURRENT', currentRate: 1}));
+    
+    // Migration: ensure accounts have types and icons
+    if (loaded.accounts) {
+       loaded.accounts = loaded.accounts.map(a => {
+           let updated = { ...a };
+           // @ts-ignore
+           if (!updated.type) updated.type = 'CURRENT';
+           if (!updated.currentRate) updated.currentRate = 1;
+           if (!updated.icon) {
+               // Heuristic for migration
+               const nameLower = updated.name.toLowerCase();
+               if (nameLower.includes('карт') || nameLower.includes('card')) updated.icon = 'credit-card';
+               else if (nameLower.includes('банк') || nameLower.includes('bank')) updated.icon = 'landmark';
+               else if (nameLower.includes('usd') || nameLower.includes('eur')) updated.icon = 'banknote';
+               else updated.icon = 'wallet';
+           }
+           return updated as Account;
+       });
     }
+
     // Migration for categories (ensure monthlyBudget exists)
     if(loaded.categories) {
         loaded.categories = loaded.categories.map(c => ({
@@ -200,7 +215,7 @@ export default function App() {
     <div className="h-full flex flex-col bg-gray-50 max-w-lg mx-auto shadow-2xl overflow-hidden relative border-x border-gray-200">
       
       {/* Header */}
-      <header className="bg-white px-4 py-3 flex justify-between items-center shadow-sm z-20">
+      <header className="bg-white px-4 py-3 flex justify-between items-center shadow-sm z-20 shrink-0">
         <div className="flex items-center gap-2">
            <AppIcon />
            <h1 className="font-bold text-gray-800 text-lg">budget vs actual</h1>
@@ -229,7 +244,7 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto no-scrollbar relative">
+      <main className="flex-1 overflow-y-auto no-scrollbar relative w-full">
         {activeTab === 'overview' && (
             <OverviewTab transactions={data.transactions} categories={data.categories} />
         )}
@@ -262,7 +277,7 @@ export default function App() {
         )}
       </main>
 
-      {/* FAB - Add Button */}
+      {/* FAB - Add Button (Absolute positioned relative to container) */}
       <div className="absolute bottom-20 right-4 z-30">
           <button 
             onClick={() => {
@@ -276,31 +291,31 @@ export default function App() {
       </div>
 
       {/* Bottom Navigation */}
-      <nav className="bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-between items-center z-20 pb-4">
+      <nav className="bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-between items-center z-20 pb-4 shrink-0">
         <button 
             onClick={() => setActiveTab('overview')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
             <LayoutDashboard size={24} strokeWidth={activeTab === 'overview' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Огляд</span>
         </button>
         <button 
             onClick={() => setActiveTab('transactions')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
             <List size={24} strokeWidth={activeTab === 'transactions' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Транзакції</span>
         </button>
         <button 
             onClick={() => setActiveTab('budget')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
             <Calculator size={24} strokeWidth={activeTab === 'budget' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Бюджет</span>
         </button>
         <button 
             onClick={() => setActiveTab('accounts')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
             <Wallet size={24} strokeWidth={activeTab === 'accounts' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Рахунки</span>

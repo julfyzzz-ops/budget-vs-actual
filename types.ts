@@ -23,6 +23,7 @@ export interface Account {
   currency: Currency;
   initialBalance: number;
   color: string;
+  icon: string; // Icon name from CategoryIcon map
   type: AccountType;
   currentRate: number; // Current exchange rate to UAH for balance display
 }

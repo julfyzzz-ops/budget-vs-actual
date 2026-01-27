@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Account, Category, Currency, Transaction, TransactionType } from '../types';
 import { Button } from './ui/Button';
-import { X, ArrowRightLeft, AlertCircle } from 'lucide-react';
+import { X, ArrowRightLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 
 interface AddTransactionModalProps {
@@ -87,36 +87,85 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     const r = parseFloat(rate);
 
     if (!srcAmt || !dstAmt || !r) {
-        // Don't show error while typing, just disable save potentially or wait
         setValidationError(null);
         return;
     }
 
     let isValid = true;
-    const threshold = 1.0; // Allow 1 unit difference for rounding
-
-    if (sourceAccount?.currency === Currency.UAH) {
-        if (Math.abs(srcAmt - (dstAmt * r)) > threshold) {
-            isValid = false;
-        }
-    } else if (targetAccount?.currency === Currency.UAH) {
-        if (Math.abs(dstAmt - (srcAmt * r)) > threshold) {
-            isValid = false;
-        }
+    
+    // Determine expected math based on direction
+    // Case 1: FX Sell (Foreign -> UAH). Rate is UAH/FX. Dst = Src * Rate.
+    const isSell = sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH;
+    
+    // Case 2: FX Buy (UAH -> Foreign) or Cross. Rate is UAH/FX or Src/Dst. Dst = Src / Rate.
+    // (Existing logic implies Rate is always "Price of Foreign in UAH" or "Src/Dst")
+    
+    let calculatedDest = 0;
+    
+    if (isSell) {
+        calculatedDest = srcAmt * r;
     } else {
-        const impliedRate = srcAmt / dstAmt;
-        if (Math.abs(impliedRate - r) > 0.1) {
-             // lenient check for cross rates
-        }
+        calculatedDest = srcAmt / r;
+    }
+
+    // Check deviation
+    const diff = Math.abs(calculatedDest - dstAmt);
+    // Allow small difference (e.g. 1 unit) due to rounding
+    if (diff > 1.0) {
+        isValid = false;
     }
 
     if (!isValid) {
-        setValidationError('Суми не відповідають вказаному курсу!');
+        setValidationError('Суми не відповідають вказаному курсу');
     } else {
         setValidationError(null);
     }
 
   }, [amount, toAmount, rate, isMultiCurrencyTransfer, sourceAccount, targetAccount]);
+
+  // --- Auto-Calculation Logic ---
+
+  const handleAmountChange = (val: string) => {
+      setAmount(val);
+      if (isMultiCurrencyTransfer && rate && val) {
+          const s = parseFloat(val);
+          const r = parseFloat(rate);
+          if (!isNaN(s) && !isNaN(r) && r !== 0) {
+              const isSell = sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH;
+              const newTo = isSell ? s * r : s / r;
+              // Format to max 2 decimals, trim trailing zeros if needed for better UX
+              setToAmount(parseFloat(newTo.toFixed(2)).toString());
+          }
+      }
+  };
+
+  const handleToAmountChange = (val: string) => {
+      setToAmount(val);
+      if (isMultiCurrencyTransfer && amount && val) {
+          const s = parseFloat(amount);
+          const d = parseFloat(val);
+          if (!isNaN(s) && !isNaN(d) && d !== 0 && s !== 0) {
+              const isSell = sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH;
+              // If Sell: D = S * R => R = D / S
+              // If Buy:  D = S / R => R = S / D
+              const newRate = isSell ? d / s : s / d;
+              setRate(parseFloat(newRate.toFixed(4)).toString());
+          }
+      }
+  };
+
+  const handleRateChange = (val: string) => {
+      setRate(val);
+      if (isMultiCurrencyTransfer && amount && val) {
+          const s = parseFloat(amount);
+          const r = parseFloat(val);
+          if (!isNaN(s) && !isNaN(r) && r !== 0) {
+              const isSell = sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH;
+              const newTo = isSell ? s * r : s / r;
+              setToAmount(parseFloat(newTo.toFixed(2)).toString());
+          }
+      }
+  };
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -134,9 +183,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 alert("Вкажіть суму зарахування");
                 return;
             }
+            // Allow submission with warning confirmation if strict validation fails, or just block?
+            // User requested better validation, let's block if widely off.
             if (validationError) {
-                alert("Перевірте суми та курс. Розрахунок не сходиться.");
-                return;
+                if (!confirm("Суми не сходяться з курсом. Зберегти як є?")) {
+                    return;
+                }
             }
         }
     }
@@ -199,6 +251,17 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     }
   };
 
+  const handleToAccountChange = (id: string) => {
+      setToAccountId(id);
+      // Auto-set rate if target is foreign and source is UAH, use target's rate
+      const target = accounts.find(a => a.id === id);
+      const source = accounts.find(a => a.id === accountId);
+      
+      if (source && target && source.currency === Currency.UAH && target.currency !== Currency.UAH) {
+          setRate(String(target.currentRate || 1));
+      }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
       <div className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
@@ -258,7 +321,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                         <label className="block text-xs font-medium text-gray-500 mb-1">На рахунок</label>
                         <select 
                             value={toAccountId}
-                            onChange={(e) => setToAccountId(e.target.value)}
+                            onChange={(e) => handleToAccountChange(e.target.value)}
                             className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary text-sm"
                         >
                             <option value="">Оберіть...</option>
@@ -285,57 +348,59 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
             {/* Amounts Area */}
             {isMultiCurrencyTransfer ? (
-                <div className="bg-gray-50 p-4 rounded-xl space-y-3">
-                    <div className="flex justify-between items-center text-xs text-gray-500 font-medium">
-                        <span>Обмін валют</span>
-                        {validationError && <span className="text-red-500 flex items-center gap-1"><AlertCircle size={12}/> Помилка курсу</span>}
+                <div className={`p-4 rounded-xl space-y-3 border transition-colors ${validationError ? 'bg-red-50 border-red-200' : 'bg-blue-50 border-blue-100'}`}>
+                    <div className="flex justify-between items-center text-xs font-medium">
+                        <span className={validationError ? 'text-red-600' : 'text-blue-600'}>Обмін валют (Авторозрахунок)</span>
                     </div>
                     
                     <div>
-                        <label className="block text-xs text-gray-400 mb-1">Списання ({sourceAccount?.currency})</label>
+                        <label className="block text-xs text-gray-500 mb-1">Списання ({sourceAccount?.currency})</label>
                         <input 
                             type="number" 
                             step="0.01" 
                             required
                             value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-primary ${validationError ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                            onChange={(e) => handleAmountChange(e.target.value)}
+                            className="w-full p-2 rounded-lg border border-white/50 bg-white focus:ring-2 focus:ring-primary shadow-sm"
                             placeholder="0.00"
                         />
                     </div>
                     
                     <div className="flex items-center gap-2">
-                        <div className="h-px bg-gray-300 flex-1"></div>
-                        <div className="text-xs text-gray-400 font-mono">@ курс</div>
+                        <div className="h-px bg-gray-300 flex-1 opacity-50"></div>
+                        <div className="text-xs text-gray-500 font-mono whitespace-nowrap">
+                            Курс: 1 {sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH ? sourceAccount.currency : targetAccount?.currency} =
+                        </div>
                         <input 
                             type="number" 
-                            step="0.01"
+                            step="0.0001"
                             value={rate}
-                            onChange={(e) => setRate(e.target.value)}
-                            className="w-20 p-1 text-center text-sm rounded border border-gray-300"
+                            onChange={(e) => handleRateChange(e.target.value)}
+                            className="w-24 p-1 text-center text-sm rounded border border-gray-200 bg-white font-bold text-gray-700"
                         />
-                        <div className="h-px bg-gray-300 flex-1"></div>
+                         <div className="text-xs text-gray-500 font-mono">
+                            {sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH ? targetAccount.currency : sourceAccount?.currency}
+                        </div>
+                        <div className="h-px bg-gray-300 flex-1 opacity-50"></div>
                     </div>
 
                     <div>
-                        <label className="block text-xs text-gray-400 mb-1">Зарахування ({targetAccount?.currency})</label>
+                        <label className="block text-xs text-gray-500 mb-1">Зарахування ({targetAccount?.currency})</label>
                         <input 
                             type="number" 
                             step="0.01" 
                             required
                             value={toAmount}
-                            onChange={(e) => setToAmount(e.target.value)}
-                            className={`w-full p-2 rounded-lg border focus:ring-2 focus:ring-primary ${validationError ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                            onChange={(e) => handleToAmountChange(e.target.value)}
+                             className="w-full p-2 rounded-lg border border-white/50 bg-white focus:ring-2 focus:ring-primary shadow-sm"
                             placeholder="0.00"
                         />
                     </div>
                     
                     {validationError && (
-                        <div className="text-xs text-red-500 mt-1">
-                            {sourceAccount?.currency === Currency.UAH 
-                                ? `Очікується: ${amount} UAH ≈ ${toAmount || 0} ${targetAccount?.currency} * ${rate}`
-                                : `Очікується: ${toAmount || 0} UAH ≈ ${amount} ${sourceAccount?.currency} * ${rate}`
-                            }
+                        <div className="flex items-start gap-2 text-xs text-red-600 mt-2 bg-white/50 p-2 rounded">
+                            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                            <span>{validationError}. Перевірте введені дані, або скоригуйте курс.</span>
                         </div>
                     )}
                 </div>
@@ -358,7 +423,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                         <label className="block text-xs font-medium text-gray-500 mb-1">Валюта</label>
                         <select 
                             value={currency}
-                            disabled={true} // Locked to account currency for simplicity in this version
+                            disabled={true} 
                             className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary font-medium opacity-75"
                         >
                             <option value={currency}>{currency}</option>
@@ -427,7 +492,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 />
             </div>
 
-            <Button type="submit" fullWidth className="py-4 mt-4 text-lg" disabled={!!validationError}>
+            <Button type="submit" fullWidth className="py-4 mt-4 text-lg">
                 Зберегти
             </Button>
         </form>
