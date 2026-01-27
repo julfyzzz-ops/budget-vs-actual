@@ -62,14 +62,34 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
     return accounts.filter(a => (a.type || AccountType.CURRENT) === type);
   };
 
+  const getGroupTotalInUAH = (type: AccountType) => {
+    const group = groupAccounts(type);
+    return group.reduce((sum, account) => {
+        const balance = getBalance(account);
+        // Convert to UAH approximation for total display
+        const balanceInUAH = balance * (account.currentRate || 1);
+        return sum + balanceInUAH;
+    }, 0);
+  };
+
   const renderAccountGroup = (title: string, type: AccountType) => {
     const group = groupAccounts(type);
+    
+    // Don't show empty groups unless in edit mode, but if in edit mode, show even if empty so we see structure
     if (group.length === 0 && !isEditMode) return null;
+
+    const totalInUAH = getGroupTotalInUAH(type);
 
     return (
       <div className="mb-6">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 px-1">{title}</h3>
-        <div className="grid grid-cols-1 gap-4">
+        <div className="flex justify-between items-end mb-3 px-1">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{title}</h3>
+            <span className="text-sm font-bold text-gray-400">
+                ≈ {totalInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} ₴
+            </span>
+        </div>
+        
+        <div className="grid grid-cols-1 gap-3">
           {group.map(account => {
             const balance = getBalance(account);
             const balanceInUAH = account.currency !== Currency.UAH 
@@ -77,45 +97,42 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 : null;
 
             return (
-              <div key={account.id} className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden group">
+              <div key={account.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
                  {/* Background decoration */}
                  <div 
                     className="absolute top-0 right-0 w-24 h-24 transform translate-x-8 -translate-y-8 rounded-full opacity-10"
                     style={{ backgroundColor: account.color }}
                  />
                  
-                 <div className="flex justify-between items-start mb-4 z-10">
+                 <div className="flex items-center justify-between relative z-10">
+                   {/* Left Side: Icon & Name */}
                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-gray-50 text-gray-700">
-                          <CategoryIcon iconName={account.icon || 'wallet'} size={20} />
+                      <div className="p-2.5 rounded-xl bg-gray-50 text-gray-700 shadow-sm">
+                          <CategoryIcon iconName={account.icon || 'wallet'} size={22} />
                       </div>
-                      <div>
-                          <h3 className="font-semibold text-gray-800">{account.name}</h3>
-                          <p className="text-xs text-gray-500">Поточний баланс</p>
-                      </div>
+                      <h3 className="font-bold text-gray-800 text-base">{account.name}</h3>
                    </div>
-                   <div className="px-2 py-1 bg-gray-100 rounded text-xs font-bold text-gray-600">
-                      {account.currency}
-                   </div>
-                 </div>
 
-                 <div className="z-10 flex items-baseline justify-between">
-                    <div>
-                        <span className={`text-2xl font-bold tracking-tight ${balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
-                            {balance.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                        <span className="text-sm font-medium text-gray-500 ml-1">{account.currency}</span>
-                    </div>
-                    {balanceInUAH !== null && (
-                        <div className="text-sm text-gray-400 font-medium">
-                            ≈ {balanceInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} ₴
+                   {/* Right Side: Balances */}
+                   <div className="flex items-center gap-3 text-right">
+                        {/* Secondary Balance (UAH) - Left of main balance */}
+                        {balanceInUAH !== null && (
+                            <div className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-lg">
+                                ≈ {balanceInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} ₴
+                            </div>
+                        )}
+
+                        {/* Main Balance */}
+                        <div className={`text-lg font-bold tracking-tight whitespace-nowrap ${balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
+                            {balance.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                            <span className="text-sm font-medium text-gray-500 ml-1">{account.currency}</span>
                         </div>
-                    )}
+                   </div>
                  </div>
 
                  {/* Edit Overlay */}
                  {isEditMode && (
-                    <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-20 flex items-center justify-center gap-4 animate-fade-in transition-all">
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex items-center justify-center gap-4 animate-fade-in transition-all">
                         <button 
                             onClick={(e) => { e.stopPropagation(); onEditAccount(account); }}
                             className="w-12 h-12 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 shadow-lg transform hover:scale-110 transition-all border border-blue-200"
@@ -138,14 +155,6 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
               </div>
             );
           })}
-          {isEditMode && (
-              <button 
-                onClick={onAddAccount}
-                className="w-full py-4 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center text-gray-400 hover:border-primary hover:text-primary transition-colors bg-white/50"
-              >
-                  <Plus size={24} className="mr-2" /> Додати рахунок
-              </button>
-          )}
         </div>
       </div>
     );
@@ -153,27 +162,38 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
 
   return (
     <div className="pb-24 pt-4 px-4 relative min-h-full">
+       {/* Header with Title and Edit Toggle */}
+       <div className="flex items-center justify-between mb-2 px-1">
+          <h2 className="text-2xl font-bold text-gray-800">Рахунки</h2>
+          <button
+            onClick={() => setIsEditMode(!isEditMode)}
+            className={`p-2 rounded-full transition-all ${isEditMode ? 'bg-orange-100 text-orange-600' : 'text-gray-400 hover:bg-gray-100'}`}
+          >
+              {isEditMode ? <LockOpen size={20} /> : <Lock size={20} />}
+          </button>
+      </div>
+
       {renderAccountGroup('Поточні', AccountType.CURRENT)}
       {renderAccountGroup('Заощадження', AccountType.SAVINGS)}
       {renderAccountGroup('Заборгованість', AccountType.DEBT)}
 
-      {/* Empty State */}
+      {/* Single Add Button at the bottom */}
+      {isEditMode && (
+          <button 
+            onClick={onAddAccount}
+            className="w-full py-4 mt-2 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center text-gray-500 hover:border-primary hover:text-primary transition-colors bg-white/50 text-lg font-medium"
+          >
+              <Plus size={24} className="mr-2" /> Додати рахунок
+          </button>
+      )}
+
+      {/* Empty State (only if no accounts and not editing) */}
       {accounts.length === 0 && !isEditMode && (
           <div className="text-center text-gray-400 mt-10">
               <Banknote size={48} className="mx-auto mb-2 opacity-20" />
               <p>Рахунків немає</p>
           </div>
       )}
-
-      {/* Lock Button - Fixed Bottom Left */}
-      <div className="fixed bottom-20 left-4 z-30">
-        <button
-          onClick={() => setIsEditMode(!isEditMode)}
-          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all ${isEditMode ? 'bg-orange-500 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-        >
-            {isEditMode ? <LockOpen size={20} /> : <Lock size={20} />}
-        </button>
-      </div>
     </div>
   );
 };

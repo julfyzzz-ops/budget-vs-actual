@@ -1,3 +1,4 @@
+
 import { AppData } from '../types';
 import { INITIAL_DATA } from '../constants';
 
@@ -23,14 +24,35 @@ export const loadFromStorage = (): AppData => {
   }
 };
 
-export const exportDataToFile = (data: AppData) => {
+export const exportDataToFile = async (data: AppData) => {
+  const fileName = `budget_backup_${new Date().toISOString().split('T')[0]}.json`;
   const jsonString = JSON.stringify(data, null, 2);
+
+  // Try Web Share API first (Best for mobile iOS/Android)
+  try {
+    const file = new File([jsonString], fileName, { type: "application/json" });
+    
+    // Check if the browser supports sharing files
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: 'Резервна копія бюджету',
+        text: 'Файл даних для додатку Budget vs Actual'
+      });
+      return; // If shared successfully, stop here
+    }
+  } catch (error) {
+    console.log('Web Share API skipped or failed, falling back to download', error);
+    // If user cancelled share or error occurred, fall back to download method
+  }
+
+  // Fallback: Direct download (Best for Desktop)
   const blob = new Blob([jsonString], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   
   const link = document.createElement('a');
   link.href = url;
-  link.download = `budget_backup_${new Date().toISOString().split('T')[0]}.json`;
+  link.download = fileName;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
