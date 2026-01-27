@@ -1,0 +1,164 @@
+import React, { useState, useEffect } from 'react';
+import { Account, AccountType, Currency } from '../types';
+import { Button } from './ui/Button';
+import { X } from 'lucide-react';
+
+interface AccountModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (account: Omit<Account, 'id'> | Account) => void;
+  initialData?: Account;
+}
+
+const COLORS = ['#10b981', '#3b82f6', '#ef4444', '#f97316', '#8b5cf6', '#ec4899', '#000000', '#6b7280'];
+
+export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+  const [name, setName] = useState('');
+  const [currency, setCurrency] = useState<Currency>(Currency.UAH);
+  const [initialBalance, setInitialBalance] = useState('0');
+  const [type, setType] = useState<AccountType>(AccountType.CURRENT);
+  const [color, setColor] = useState(COLORS[0]);
+  const [currentRate, setCurrentRate] = useState('1');
+
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setCurrency(initialData.currency);
+      setInitialBalance(initialData.initialBalance.toString());
+      setType(initialData.type || AccountType.CURRENT);
+      setColor(initialData.color);
+      setCurrentRate(initialData.currentRate?.toString() || '1');
+    } else {
+      resetForm();
+    }
+  }, [initialData, isOpen]);
+
+  const resetForm = () => {
+    setName('');
+    setCurrency(Currency.UAH);
+    setInitialBalance('0');
+    setType(AccountType.CURRENT);
+    setColor(COLORS[0]);
+    setCurrentRate('1');
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const accountData = {
+      name,
+      currency,
+      initialBalance: parseFloat(initialBalance),
+      type,
+      color,
+      currentRate: parseFloat(currentRate)
+    };
+
+    if (initialData) {
+      onSave({ ...accountData, id: initialData.id });
+    } else {
+      onSave(accountData);
+    }
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold text-gray-800">{initialData ? 'Редагувати рахунок' : 'Новий рахунок'}</h2>
+          <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Назва</label>
+            <input
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary"
+              placeholder="Наприклад: Готівка"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Валюта</label>
+              <select
+                value={currency}
+                onChange={(e) => {
+                    const newCurr = e.target.value as Currency;
+                    setCurrency(newCurr);
+                    if (newCurr === Currency.UAH) setCurrentRate('1');
+                }}
+                className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary"
+              >
+                {Object.values(Currency).map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Тип рахунку</label>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value as AccountType)}
+                className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary"
+              >
+                <option value={AccountType.CURRENT}>Поточний</option>
+                <option value={AccountType.SAVINGS}>Заощадження</option>
+                <option value={AccountType.DEBT}>Заборгованість</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Початковий баланс</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={initialBalance}
+                  onChange={(e) => setInitialBalance(e.target.value)}
+                  className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary"
+                />
+             </div>
+             <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Поточний курс до UAH</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={currentRate}
+                  disabled={currency === Currency.UAH}
+                  onChange={(e) => setCurrentRate(e.target.value)}
+                  className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                />
+             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Колір</label>
+            <div className="flex flex-wrap gap-2">
+              {COLORS.map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${color === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <Button type="submit" fullWidth className="py-3 mt-4">
+            Зберегти
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+};
