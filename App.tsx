@@ -212,7 +212,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 max-w-lg mx-auto shadow-2xl overflow-hidden relative border-x border-gray-200">
+    <div className="h-full flex flex-col bg-gray-50 w-full overflow-hidden relative">
       
       {/* Header */}
       <header className="bg-white px-4 py-3 flex justify-between items-center shadow-sm z-20 shrink-0">
