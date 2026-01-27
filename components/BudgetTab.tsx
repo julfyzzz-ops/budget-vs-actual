@@ -134,20 +134,19 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
   };
 
   return (
-    <div className="pb-24 pt-4 px-4 min-h-full w-full">
-      {/* Header Toolbar */}
-      <div className="flex justify-between items-center mb-4">
-         <h2 className="text-lg font-bold text-gray-800">Бюджетування</h2>
-         <button
-          onClick={() => setIsEditMode(!isEditMode)}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1 transition-all ${isEditMode ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}`}
-        >
-            {isEditMode ? <><LockOpen size={14} /> Редагування</> : <><Lock size={14} /> Тільки перегляд</>}
-        </button>
-      </div>
-
+    <div className="pb-24 pt-4 px-4 min-h-full">
        {renderCategoryGroup(TransactionType.INCOME, 'Доходи', TrendingUp)}
        {renderCategoryGroup(TransactionType.EXPENSE, 'Витрати', TrendingDown)}
+
+       {/* Lock Button - Fixed Bottom Left */}
+      <div className="fixed bottom-20 left-4 z-30">
+        <button
+          onClick={() => setIsEditMode(!isEditMode)}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all ${isEditMode ? 'bg-orange-500 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+        >
+            {isEditMode ? <LockOpen size={20} /> : <Lock size={20} />}
+        </button>
+      </div>
     </div>
   );
 };

@@ -215,7 +215,7 @@ export default function App() {
     <div className="h-full flex flex-col bg-gray-50 w-full overflow-hidden relative">
       
       {/* Header */}
-      <header className="bg-white px-4 py-3 flex justify-between items-center shadow-sm z-20 shrink-0">
+      <header className="bg-white px-4 py-3 flex justify-between items-center shadow-sm z-20">
         <div className="flex items-center gap-2">
            <AppIcon />
            <h1 className="font-bold text-gray-800 text-lg">budget vs actual</h1>
@@ -277,7 +277,7 @@ export default function App() {
         )}
       </main>
 
-      {/* FAB - Add Button (Absolute positioned relative to container) */}
+      {/* FAB - Add Button */}
       <div className="absolute bottom-20 right-4 z-30">
           <button 
             onClick={() => {
@@ -291,31 +291,31 @@ export default function App() {
       </div>
 
       {/* Bottom Navigation */}
-      <nav className="bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-between items-center z-20 pb-4 shrink-0">
+      <nav className="bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-between items-center z-20 pb-4">
         <button 
             onClick={() => setActiveTab('overview')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
             <LayoutDashboard size={24} strokeWidth={activeTab === 'overview' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Огляд</span>
         </button>
         <button 
             onClick={() => setActiveTab('transactions')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
             <List size={24} strokeWidth={activeTab === 'transactions' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Транзакції</span>
         </button>
         <button 
             onClick={() => setActiveTab('budget')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
             <Calculator size={24} strokeWidth={activeTab === 'budget' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Бюджет</span>
         </button>
         <button 
             onClick={() => setActiveTab('accounts')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
             <Wallet size={24} strokeWidth={activeTab === 'accounts' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Рахунки</span>
