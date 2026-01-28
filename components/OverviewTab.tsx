@@ -79,7 +79,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
   };
 
   return (
-    <div className="pb-24 pt-4 px-4 space-y-6 h-full overflow-y-auto no-scrollbar">
+    <div className="pb-32 pt-4 px-4 space-y-6 h-full overflow-y-auto no-scrollbar">
       {/* Date Control */}
       <div className="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm">
         <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">

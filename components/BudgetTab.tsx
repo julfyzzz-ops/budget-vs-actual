@@ -129,7 +129,7 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
   };
 
   return (
-    <div className="pb-24 pt-4 px-4 min-h-full">
+    <div className="pb-32 pt-4 px-4 h-full overflow-y-auto no-scrollbar">
        {/* Header with Title and Edit Toggle */}
        <div className="flex items-center justify-between mb-4 px-1">
           <h2 className="text-2xl font-bold text-gray-800">Бюджет</h2>

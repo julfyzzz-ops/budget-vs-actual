@@ -164,7 +164,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-24 px-4 pt-2">
+        <div className="flex-1 overflow-y-auto no-scrollbar pb-32 px-4 pt-2">
             {sortedTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 text-center">
                     <Search size={48} className="mb-4 opacity-20" />

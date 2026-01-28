@@ -278,7 +278,7 @@ export default function App() {
       </main>
 
       {/* FAB - Add Button */}
-      <div className="absolute bottom-20 right-4 z-30">
+      <div className="absolute bottom-28 right-4 z-30">
           <button 
             onClick={() => {
                 setEditingTransaction(undefined);

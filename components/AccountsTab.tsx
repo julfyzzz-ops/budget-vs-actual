@@ -169,7 +169,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   };
 
   return (
-    <div className="pb-24 pt-4 px-4 relative min-h-full overflow-y-auto no-scrollbar">
+    <div className="pb-32 pt-4 px-4 relative h-full overflow-y-auto no-scrollbar">
        {/* Header with Title and Edit Toggle */}
        <div className="flex items-center justify-between mb-2 px-1">
           <h2 className="text-2xl font-bold text-gray-800">Рахунки</h2>
