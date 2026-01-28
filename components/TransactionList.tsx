@@ -191,6 +191,36 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                             
                             const isExpense = t.type === TransactionType.EXPENSE;
                             const isTransfer = t.type === TransactionType.TRANSFER;
+                            
+                            // Determine visual style
+                            let amountClass = 'text-gray-900';
+                            let sign = '';
+                            const absAmount = Math.abs(t.amount);
+
+                            if (isTransfer) {
+                                amountClass = 'text-blue-600';
+                            } else if (isExpense) {
+                                if (t.amount < 0) {
+                                    // Storno/Refund (Negative Expense) -> Green +
+                                    amountClass = 'text-emerald-600';
+                                    sign = '+';
+                                } else {
+                                    // Normal Expense -> Gray -
+                                    amountClass = 'text-gray-900';
+                                    sign = '-';
+                                }
+                            } else {
+                                // Income
+                                if (t.amount < 0) {
+                                    // Negative Income (Correction) -> Gray -
+                                    amountClass = 'text-gray-900';
+                                    sign = '-';
+                                } else {
+                                    // Normal Income -> Green +
+                                    amountClass = 'text-emerald-600';
+                                    sign = '+';
+                                }
+                            }
 
                             return (
                                 <div key={t.id} className="p-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
@@ -240,13 +270,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                                     <div className="text-right">
                                         {isTransfer && t.toAmount ? (
                                             <div className="flex flex-col items-end">
-                                                <span className="text-red-500 font-bold text-sm">-{t.amount.toLocaleString(undefined, { minimumFractionDigits: 0 })} {t.currency}</span>
+                                                <span className="text-red-500 font-bold text-sm">-{absAmount.toLocaleString(undefined, { minimumFractionDigits: 0 })} {t.currency}</span>
                                                 <span className="text-emerald-500 font-bold text-sm">+{t.toAmount.toLocaleString(undefined, { minimumFractionDigits: 0 })} {toAccount?.currency}</span>
                                             </div>
                                         ) : (
-                                            <div className={`font-bold text-base ${isTransfer ? 'text-blue-600' : isExpense ? 'text-gray-900' : 'text-emerald-600'}`}>
-                                                {isTransfer ? '' : (isExpense ? '-' : '+')}
-                                                {t.amount.toLocaleString(undefined, { minimumFractionDigits: 0 })} 
+                                            <div className={`font-bold text-base ${amountClass}`}>
+                                                {sign}{absAmount.toLocaleString(undefined, { minimumFractionDigits: 0 })} 
                                                 <span className="text-xs font-normal text-gray-400 ml-1">{t.currency}</span>
                                             </div>
                                         )}
