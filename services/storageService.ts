@@ -24,36 +24,19 @@ export const loadFromStorage = (): AppData => {
   }
 };
 
-export const exportDataToFile = async (data: AppData) => {
-  const fileName = `budget_backup_${new Date().toISOString().split('T')[0]}.json`;
-  const jsonString = JSON.stringify(data, null, 2);
-  let shareSuccess = false;
+// Generates the JSON string for the UI to display/use
+export const getExportDataString = (data: AppData): string => {
+  return JSON.stringify(data, null, 2);
+};
 
-  // 1. Try Web Share API (Best for Mobile)
-  try {
-    // Check support for File constructor and sharing
-    if (navigator.canShare && window.File) {
-      const file = new File([jsonString], fileName, { type: "application/json" });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Резервна копія бюджету',
-          text: 'Файл даних для додатку Budget vs Actual'
-        });
-        shareSuccess = true;
-      }
-    }
-  } catch (error) {
-    console.log('Web Share API skipped or failed', error);
-  }
+// Generates the filename
+export const getExportFileName = (): string => {
+    return `budget_backup_${new Date().toISOString().split('T')[0]}.json`;
+};
 
-  if (shareSuccess) return;
-
-  // 2. Fallback: Direct download (Best for Desktop / Android Fallback)
-  try {
-    // Using 'application/octet-stream' forces Android to treat it as a download
-    // rather than trying to open it in the browser
-    const blob = new Blob([jsonString], { type: "application/octet-stream" });
+// Attempt to download purely via browser API
+export const triggerBrowserDownload = (jsonString: string, fileName: string) => {
+    const blob = new Blob([jsonString], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
@@ -62,20 +45,19 @@ export const exportDataToFile = async (data: AppData) => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    // Small timeout to let the download start before revoking
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch (downloadError) {
-    console.error('Download failed', downloadError);
-    
-    // 3. Ultimate Fallback: Clipboard
-    try {
-      await navigator.clipboard.writeText(jsonString);
-      alert('Не вдалося створити файл (обмеження браузера). Дані скопійовано в буфер обміну! Будь ласка, вставте їх у нотатки або повідомлення "Збережене" в Telegram.');
-    } catch (clipboardError) {
-      alert('Експорт не вдався. Будь ласка, спробуйте відкрити додаток у Chrome або Safari.');
+    URL.revokeObjectURL(url);
+};
+
+// Attempt to share as text (not file) which is more compatible on Android
+export const shareAsText = async (jsonString: string) => {
+    if (navigator.share) {
+        await navigator.share({
+            title: 'Бюджет JSON',
+            text: jsonString
+        });
+    } else {
+        throw new Error("Sharing not supported");
     }
-  }
 };
 
 export const importDataFromFile = (file: File): Promise<AppData> => {
@@ -96,4 +78,16 @@ export const importDataFromFile = (file: File): Promise<AppData> => {
     };
     reader.readAsText(file);
   });
+};
+
+export const importDataFromString = (jsonString: string): AppData => {
+    try {
+        const data = JSON.parse(jsonString);
+        if (!data.transactions || !data.accounts) {
+            throw new Error("Invalid format");
+        }
+        return data;
+    } catch (e) {
+        throw e;
+    }
 };

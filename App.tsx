@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, List, Wallet, Plus, Settings, Download, Upload, Calculator } from 'lucide-react';
+import { LayoutDashboard, List, Wallet, Plus, Settings, Calculator } from 'lucide-react';
 import { AppData, Transaction, Account, Category } from './types';
 import { INITIAL_DATA } from './constants';
-import { loadFromStorage, saveToStorage, exportDataToFile, importDataFromFile } from './services/storageService';
+import { loadFromStorage, saveToStorage } from './services/storageService';
 import { OverviewTab } from './components/OverviewTab';
 import { TransactionList } from './components/TransactionList';
 import { AccountsTab } from './components/AccountsTab';
@@ -11,6 +11,7 @@ import { BudgetTab } from './components/BudgetTab';
 import { AddTransactionModal } from './components/AddTransactionModal';
 import { AccountModal } from './components/AccountModal';
 import { CategoryModal } from './components/CategoryModal';
+import { DataManagementModal } from './components/DataManagementModal';
 
 // Simple UUID generator fallback since we can't install packages freely
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -35,13 +36,12 @@ export default function App() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isDataModalOpen, setIsDataModalOpen] = useState(false);
   
   const [editingAccount, setEditingAccount] = useState<Account | undefined>(undefined);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
   
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   // Load data on mount
   useEffect(() => {
     const loaded = loadFromStorage();
@@ -195,20 +195,9 @@ export default function App() {
       setIsCategoryModalOpen(true);
   };
 
-
-  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const imported = await importDataFromFile(file);
-        if(confirm('Це перезапише ваші поточні дані. Продовжити?')) {
-            setData(imported);
-            alert('Дані успішно імпортовано!');
-        }
-      } catch (err) {
-        alert('Помилка імпорту файлу');
-      }
-    }
+  const handleDataImport = (newData: AppData) => {
+      setData(newData);
+      alert('Дані успішно імпортовано!');
   };
 
   return (
@@ -220,27 +209,9 @@ export default function App() {
            <AppIcon />
            <h1 className="font-bold text-gray-800 text-lg">budget vs actual</h1>
         </div>
-        <div className="relative">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full">
-                <Settings size={20} />
-            </button>
-            {isMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden animate-fade-in">
-                    <button 
-                        onClick={() => { exportDataToFile(data); setIsMenuOpen(false); }}
-                        className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm flex items-center gap-2 text-gray-700"
-                    >
-                        <Download size={16} /> Експорт (JSON)
-                    </button>
-                    <label className="w-full text-left px-4 py-3 hover:bg-gray-50 text-sm flex items-center gap-2 text-gray-700 cursor-pointer border-t border-gray-50">
-                        <Upload size={16} /> Імпорт (JSON)
-                        <input type="file" accept=".json" className="hidden" onChange={handleImport} />
-                    </label>
-                </div>
-            )}
-            {/* Overlay to close menu */}
-            {isMenuOpen && <div className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />}
-        </div>
+        <button onClick={() => setIsDataModalOpen(true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full">
+            <Settings size={20} />
+        </button>
       </header>
 
       {/* Main Content Area */}
@@ -344,6 +315,13 @@ export default function App() {
         onClose={() => setIsCategoryModalOpen(false)}
         onSave={saveCategory}
         initialData={editingCategory}
+      />
+
+      <DataManagementModal
+        isOpen={isDataModalOpen}
+        onClose={() => setIsDataModalOpen(false)}
+        currentData={data}
+        onImport={handleDataImport}
       />
     </div>
   );
