@@ -53,7 +53,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   return (
     <div className="pb-24 pt-4 px-4 space-y-4 min-h-full relative">
-      {Object.entries(grouped).map(([date, items]) => (
+      {Object.entries(grouped).map(([date, items]: [string, Transaction[]]) => (
         <div key={date} className="animate-fade-in">
           <div className="flex items-center gap-2 mb-2 sticky top-0 bg-background/95 backdrop-blur py-2 z-10">
             <Calendar size={14} className="text-gray-500" />

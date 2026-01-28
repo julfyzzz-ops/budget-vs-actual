@@ -27,36 +27,55 @@ export const loadFromStorage = (): AppData => {
 export const exportDataToFile = async (data: AppData) => {
   const fileName = `budget_backup_${new Date().toISOString().split('T')[0]}.json`;
   const jsonString = JSON.stringify(data, null, 2);
+  let shareSuccess = false;
 
-  // Try Web Share API first (Best for mobile iOS/Android)
+  // 1. Try Web Share API (Best for Mobile)
   try {
-    const file = new File([jsonString], fileName, { type: "application/json" });
-    
-    // Check if the browser supports sharing files
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        files: [file],
-        title: 'Резервна копія бюджету',
-        text: 'Файл даних для додатку Budget vs Actual'
-      });
-      return; // If shared successfully, stop here
+    // Check support for File constructor and sharing
+    if (navigator.canShare && window.File) {
+      const file = new File([jsonString], fileName, { type: "application/json" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Резервна копія бюджету',
+          text: 'Файл даних для додатку Budget vs Actual'
+        });
+        shareSuccess = true;
+      }
     }
   } catch (error) {
-    console.log('Web Share API skipped or failed, falling back to download', error);
-    // If user cancelled share or error occurred, fall back to download method
+    console.log('Web Share API skipped or failed', error);
   }
 
-  // Fallback: Direct download (Best for Desktop)
-  const blob = new Blob([jsonString], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  if (shareSuccess) return;
+
+  // 2. Fallback: Direct download (Best for Desktop / Android Fallback)
+  try {
+    // Using 'application/octet-stream' forces Android to treat it as a download
+    // rather than trying to open it in the browser
+    const blob = new Blob([jsonString], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Small timeout to let the download start before revoking
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (downloadError) {
+    console.error('Download failed', downloadError);
+    
+    // 3. Ultimate Fallback: Clipboard
+    try {
+      await navigator.clipboard.writeText(jsonString);
+      alert('Не вдалося створити файл (обмеження браузера). Дані скопійовано в буфер обміну! Будь ласка, вставте їх у нотатки або повідомлення "Збережене" в Telegram.');
+    } catch (clipboardError) {
+      alert('Експорт не вдався. Будь ласка, спробуйте відкрити додаток у Chrome або Safari.');
+    }
+  }
 };
 
 export const importDataFromFile = (file: File): Promise<AppData> => {
