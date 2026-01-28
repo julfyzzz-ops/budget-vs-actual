@@ -1,15 +1,16 @@
 
 import React, { useMemo, useState } from 'react';
 import { Transaction, Category, TransactionType } from '../types';
-import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, AlertCircle, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 
 interface OverviewTabProps {
   transactions: Transaction[];
   categories: Category[];
+  onCategoryClick: (categoryId: string, date: Date) => void;
 }
 
-export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categories }) => {
+export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categories, onCategoryClick }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const periodLabel = useMemo(() => {
@@ -78,7 +79,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
   };
 
   return (
-    <div className="pb-24 pt-4 px-4 space-y-6">
+    <div className="pb-24 pt-4 px-4 space-y-6 h-full overflow-y-auto no-scrollbar">
       {/* Date Control */}
       <div className="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm">
         <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
@@ -128,29 +129,38 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
       </div>
 
       {/* Detailed Spending List with Budget Bars */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-          <h3 className="font-semibold text-gray-700 mb-4">Деталі по категоріям</h3>
-          <div className="space-y-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-700">Деталі по категоріям</h3>
+          </div>
+          <div className="divide-y divide-gray-50">
               {stats.chartData.map((item) => {
                   const percent = item.budget > 0 ? (item.value / item.budget) * 100 : 0;
                   // Show items if they have budget OR spending
                   if (item.budget === 0 && item.value === 0) return null;
 
                   return (
-                      <div key={item.id}>
-                          <div className="flex justify-between text-sm mb-1">
+                      <div 
+                        key={item.id} 
+                        className="p-4 hover:bg-gray-50 cursor-pointer transition-colors active:bg-gray-100"
+                        onClick={() => onCategoryClick(item.id, currentDate)}
+                      >
+                          <div className="flex justify-between text-sm mb-1.5">
                               <div className="flex items-center gap-2">
                                   <div className="w-5 h-5 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: item.color }}>
                                      <CategoryIcon iconName={item.icon} size={12} />
                                   </div>
                                   <span className="text-gray-700 font-medium">{item.name}</span>
                               </div>
-                              <span className="text-gray-900">
-                                  {item.value.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} 
-                                  <span className="text-gray-400 text-xs ml-1">
-                                      / {item.budget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
-                                  </span>
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-900 font-semibold">
+                                    {item.value.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} 
+                                    <span className="text-gray-400 text-xs font-normal ml-1">
+                                        / {item.budget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
+                                    </span>
+                                </span>
+                                <ChevronRightIcon size={14} className="text-gray-300" />
+                              </div>
                           </div>
                           <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                               <div 

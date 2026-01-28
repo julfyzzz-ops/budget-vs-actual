@@ -5,7 +5,7 @@ import { AppData, Transaction, Account, Category } from './types';
 import { INITIAL_DATA } from './constants';
 import { loadFromStorage, saveToStorage } from './services/storageService';
 import { OverviewTab } from './components/OverviewTab';
-import { TransactionList } from './components/TransactionList';
+import { TransactionList, TransactionFilters } from './components/TransactionList';
 import { AccountsTab } from './components/AccountsTab';
 import { BudgetTab } from './components/BudgetTab';
 import { AddTransactionModal } from './components/AddTransactionModal';
@@ -33,6 +33,10 @@ const AppIcon = () => (
 export default function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'accounts' | 'budget'>('overview');
   const [data, setData] = useState<AppData>(INITIAL_DATA);
+  
+  // Navigation & Filtering State
+  const [transactionFilters, setTransactionFilters] = useState<TransactionFilters | null>(null);
+
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -200,6 +204,25 @@ export default function App() {
       alert('Дані успішно імпортовано!');
   };
 
+  // --- Navigation & Filtering Handlers ---
+  const handleOverviewCategoryClick = (categoryId: string, date: Date) => {
+    setTransactionFilters({
+        categoryId,
+        date,
+        accountId: ''
+    });
+    setActiveTab('transactions');
+  };
+
+  const handleAccountSelect = (accountId: string) => {
+    setTransactionFilters({
+        accountId,
+        date: new Date(), // Default to current month, user can change
+        categoryId: ''
+    });
+    setActiveTab('transactions');
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-50 w-full overflow-hidden relative">
       
@@ -215,9 +238,13 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto no-scrollbar relative w-full">
+      <main className="flex-1 overflow-hidden relative w-full">
         {activeTab === 'overview' && (
-            <OverviewTab transactions={data.transactions} categories={data.categories} />
+            <OverviewTab 
+                transactions={data.transactions} 
+                categories={data.categories}
+                onCategoryClick={handleOverviewCategoryClick} 
+            />
         )}
         {activeTab === 'transactions' && (
             <TransactionList 
@@ -226,6 +253,7 @@ export default function App() {
                 categories={data.categories} 
                 onDelete={deleteTransaction}
                 onEdit={openEditTransaction}
+                initialFilters={transactionFilters}
             />
         )}
         {activeTab === 'accounts' && (
@@ -235,6 +263,7 @@ export default function App() {
                 onAddAccount={openAddAccount}
                 onEditAccount={openEditAccount}
                 onDeleteAccount={deleteAccount}
+                onSelectAccount={handleAccountSelect}
             />
         )}
         {activeTab === 'budget' && (

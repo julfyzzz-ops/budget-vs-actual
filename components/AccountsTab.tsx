@@ -11,6 +11,7 @@ interface AccountsTabProps {
   onAddAccount: () => void;
   onEditAccount: (account: Account) => void;
   onDeleteAccount: (id: string) => void;
+  onSelectAccount: (accountId: string) => void;
 }
 
 export const AccountsTab: React.FC<AccountsTabProps> = ({ 
@@ -18,7 +19,8 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   transactions,
   onAddAccount,
   onEditAccount,
-  onDeleteAccount
+  onDeleteAccount,
+  onSelectAccount
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -97,7 +99,13 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 : null;
 
             return (
-              <div key={account.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
+              <div 
+                key={account.id} 
+                onClick={() => {
+                    if (!isEditMode) onSelectAccount(account.id);
+                }}
+                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group ${!isEditMode ? 'cursor-pointer hover:shadow-md transition-shadow active:scale-[0.99] transition-transform' : ''}`}
+              >
                  {/* Background decoration */}
                  <div 
                     className="absolute top-0 right-0 w-24 h-24 transform translate-x-8 -translate-y-8 rounded-full opacity-10"
@@ -161,7 +169,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   };
 
   return (
-    <div className="pb-24 pt-4 px-4 relative min-h-full">
+    <div className="pb-24 pt-4 px-4 relative min-h-full overflow-y-auto no-scrollbar">
        {/* Header with Title and Edit Toggle */}
        <div className="flex items-center justify-between mb-2 px-1">
           <h2 className="text-2xl font-bold text-gray-800">Рахунки</h2>
