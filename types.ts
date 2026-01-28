@@ -25,7 +25,7 @@ export interface Account {
   color: string;
   icon: string; // Icon name from CategoryIcon map
   type: AccountType;
-  currentRate: number; // Current exchange rate to UAH for balance display
+  currentRate: number; // Legacy, but kept for compatibility. UI now prefers AppData.rates
 }
 
 export interface Category {
@@ -55,6 +55,7 @@ export interface AppData {
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
+  rates: Record<string, number>; // Global exchange rates (e.g., "USD": 41.5)
 }
 
 export const BASE_CURRENCY = Currency.UAH;

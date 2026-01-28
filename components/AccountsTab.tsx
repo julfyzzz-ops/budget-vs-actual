@@ -1,26 +1,30 @@
 
 import React, { useState } from 'react';
 import { Account, AccountType, Currency, Transaction, TransactionType } from '../types';
-import { Lock, LockOpen, Trash2, Pencil, Plus, Banknote } from 'lucide-react';
+import { Lock, LockOpen, Trash2, Pencil, Plus, Banknote, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CategoryIcon } from './CategoryIcon';
 
 interface AccountsTabProps {
   accounts: Account[];
   transactions: Transaction[];
+  rates: Record<string, number>;
   onAddAccount: () => void;
   onEditAccount: (account: Account) => void;
   onDeleteAccount: (id: string) => void;
   onSelectAccount: (accountId: string) => void;
+  onReorderAccounts: (accounts: Account[]) => void;
 }
 
 export const AccountsTab: React.FC<AccountsTabProps> = ({ 
   accounts, 
   transactions,
+  rates,
   onAddAccount,
   onEditAccount,
   onDeleteAccount,
-  onSelectAccount
+  onSelectAccount,
+  onReorderAccounts
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -52,7 +56,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
         // Fallback: Convert Source Amount -> UAH -> Dest Amount using global rates
         // This is less accurate for past transactions if rates changed, but kept for backward compatibility
         const amountInUAH = t.amount * t.exchangeRate;
-        const destRate = account.currentRate || 1; 
+        const destRate = rates[account.currency] || 1; 
         const amountInDestCurrency = amountInUAH / destRate;
         return sum + amountInDestCurrency;
     }, 0);
@@ -68,10 +72,34 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
     const group = groupAccounts(type);
     return group.reduce((sum, account) => {
         const balance = getBalance(account);
-        // Convert to UAH approximation for total display
-        const balanceInUAH = balance * (account.currentRate || 1);
+        // Convert to UAH approximation using GLOBAL RATES from settings
+        const rate = rates[account.currency] || 1;
+        const balanceInUAH = balance * rate;
         return sum + balanceInUAH;
     }, 0);
+  };
+
+  const moveAccount = (index: number, direction: 'up' | 'down', groupType: AccountType) => {
+      const current = groupAccounts(AccountType.CURRENT);
+      const savings = groupAccounts(AccountType.SAVINGS);
+      const debt = groupAccounts(AccountType.DEBT);
+
+      // Determine which array we are modifying
+      let targetGroup: Account[] = [];
+      if (groupType === AccountType.CURRENT) targetGroup = current;
+      if (groupType === AccountType.SAVINGS) targetGroup = savings;
+      if (groupType === AccountType.DEBT) targetGroup = debt;
+
+      if (direction === 'up') {
+          if (index === 0) return;
+          [targetGroup[index - 1], targetGroup[index]] = [targetGroup[index], targetGroup[index - 1]];
+      } else {
+          if (index === targetGroup.length - 1) return;
+          [targetGroup[index], targetGroup[index + 1]] = [targetGroup[index + 1], targetGroup[index]];
+      }
+
+      // Reconstruct full list (order matters: Current -> Savings -> Debt)
+      onReorderAccounts([...current, ...savings, ...debt]);
   };
 
   const renderAccountGroup = (title: string, type: AccountType) => {
@@ -83,20 +111,26 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
     const totalInUAH = getGroupTotalInUAH(type);
 
     return (
-      <div className="mb-6">
+      <div className="mb-6 animate-fade-in">
         <div className="flex justify-between items-end mb-3 px-1">
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{title}</h3>
             <span className="text-sm font-bold text-gray-400">
-                ≈ {totalInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} ₴
+                 {totalInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} UAH
             </span>
         </div>
         
         <div className="grid grid-cols-1 gap-3">
-          {group.map(account => {
+          {group.map((account, index) => {
             const balance = getBalance(account);
+            // Use global rate for display calculation
+            const currentRate = rates[account.currency] || 1;
             const balanceInUAH = account.currency !== Currency.UAH 
-                ? balance * (account.currentRate || 1) 
+                ? balance * currentRate
                 : null;
+            
+            // Generate a subtle background color and border color
+            const bgColor = account.color + '10'; // 6% opacity roughly
+            const borderColor = account.color;
 
             return (
               <div 
@@ -104,62 +138,80 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 onClick={() => {
                     if (!isEditMode) onSelectAccount(account.id);
                 }}
-                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group ${!isEditMode ? 'cursor-pointer hover:shadow-md transition-shadow active:scale-[0.99] transition-transform' : ''}`}
+                className={`rounded-xl shadow-sm border border-gray-100 relative overflow-hidden group transition-all ${!isEditMode ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}
+                style={{ 
+                    background: `linear-gradient(110deg, white 40%, ${bgColor} 100%)`,
+                    borderLeft: `5px solid ${borderColor}`
+                }}
               >
-                 {/* Background decoration */}
-                 <div 
-                    className="absolute top-0 right-0 w-24 h-24 transform translate-x-8 -translate-y-8 rounded-full opacity-10"
-                    style={{ backgroundColor: account.color }}
-                 />
-                 
-                 <div className="flex items-center justify-between relative z-10">
+                 <div className="flex items-center justify-between p-4 relative z-10">
                    {/* Left Side: Icon & Name */}
-                   <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-gray-50 text-gray-700 shadow-sm">
-                          <CategoryIcon iconName={account.icon || 'wallet'} size={22} />
+                   <div className="flex items-center gap-3 overflow-hidden">
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm"
+                        style={{ backgroundColor: account.color }}
+                      >
+                          <CategoryIcon iconName={account.icon || 'wallet'} size={20} />
                       </div>
-                      <h3 className="font-bold text-gray-800 text-base">{account.name}</h3>
+                      <div className="min-w-0">
+                          <h3 className="font-bold text-gray-800 text-base truncate pr-2">{account.name}</h3>
+                          {balanceInUAH !== null && (
+                            <div className="text-xs font-medium text-gray-400 mt-0.5">
+                                {balanceInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} UAH
+                            </div>
+                           )}
+                      </div>
                    </div>
 
-                   {/* Right Side: Balances */}
-                   <div className="flex items-center gap-3 text-right">
-                        {/* Secondary Balance (UAH) - Left of main balance */}
-                        {balanceInUAH !== null && (
-                            <div className="text-xs font-medium text-gray-400 bg-gray-50 px-2 py-1 rounded-lg">
-                                ≈ {balanceInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} ₴
+                   {/* Right Side: Balances or Controls */}
+                   <div className="flex items-center gap-3 text-right shrink-0">
+                        {isEditMode ? (
+                           <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm p-1 rounded-full border border-gray-200 shadow-sm">
+                               {/* Reorder Controls */}
+                               <button 
+                                    onClick={(e) => { e.stopPropagation(); moveAccount(index, 'up', type); }}
+                                    disabled={index === 0}
+                                    className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white rounded-full disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                               >
+                                   <ArrowUp size={16} strokeWidth={2.5} />
+                               </button>
+                               <button 
+                                    onClick={(e) => { e.stopPropagation(); moveAccount(index, 'down', type); }}
+                                    disabled={index === group.length - 1}
+                                    className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white rounded-full disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                               >
+                                   <ArrowDown size={16} strokeWidth={2.5} />
+                               </button>
+                               
+                               <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
+                               <button 
+                                    onClick={(e) => { e.stopPropagation(); onEditAccount(account); }}
+                                    className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                                >
+                                    <Pencil size={16} />
+                                </button>
+                                <button 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        if(window.confirm('Видалити цей рахунок та всі його транзакції?')) {
+                                            onDeleteAccount(account.id);
+                                        }
+                                    }}
+                                    className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                           </div>
+                        ) : (
+                            /* Main Balance Display */
+                            <div className={`text-lg font-bold tracking-tight whitespace-nowrap ${balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
+                                {balance.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                <span className="text-sm font-medium text-gray-500 ml-1">{account.currency}</span>
                             </div>
                         )}
-
-                        {/* Main Balance */}
-                        <div className={`text-lg font-bold tracking-tight whitespace-nowrap ${balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
-                            {balance.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                            <span className="text-sm font-medium text-gray-500 ml-1">{account.currency}</span>
-                        </div>
                    </div>
                  </div>
-
-                 {/* Edit Overlay */}
-                 {isEditMode && (
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-20 flex items-center justify-center gap-4 animate-fade-in transition-all">
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onEditAccount(account); }}
-                            className="w-12 h-12 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 shadow-lg transform hover:scale-110 transition-all border border-blue-200"
-                        >
-                            <Pencil size={20} />
-                        </button>
-                        <button 
-                            onClick={(e) => { 
-                                e.stopPropagation(); 
-                                if(window.confirm('Видалити цей рахунок та всі його транзакції?')) {
-                                    onDeleteAccount(account.id);
-                                }
-                            }}
-                            className="w-12 h-12 flex items-center justify-center bg-red-100 text-red-600 rounded-full hover:bg-red-200 shadow-lg transform hover:scale-110 transition-all border border-red-200"
-                        >
-                            <Trash2 size={20} />
-                        </button>
-                    </div>
-                 )}
               </div>
             );
           })}
@@ -171,7 +223,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   return (
     <div className="pb-32 pt-4 px-4 relative h-full overflow-y-auto no-scrollbar">
        {/* Header with Title and Edit Toggle */}
-       <div className="flex items-center justify-between mb-2 px-1">
+       <div className="flex items-center justify-between mb-4 px-1">
           <h2 className="text-2xl font-bold text-gray-800">Рахунки</h2>
           <button
             onClick={() => setIsEditMode(!isEditMode)}

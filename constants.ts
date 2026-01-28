@@ -23,4 +23,9 @@ export const INITIAL_DATA: AppData = {
   accounts: DEFAULT_ACCOUNTS,
   categories: DEFAULT_CATEGORIES,
   transactions: [],
+  rates: {
+      [Currency.USD]: 41.5,
+      [Currency.EUR]: 44.0,
+      [Currency.UAH]: 1,
+  }
 };

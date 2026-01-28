@@ -12,10 +12,11 @@ interface AddTransactionModalProps {
   accounts: Account[];
   categories: Category[];
   initialData?: Transaction;
+  rates?: Record<string, number>;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
-  isOpen, onClose, onSave, accounts, categories, initialData
+  isOpen, onClose, onSave, accounts, categories, initialData, rates
 }) => {
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [amount, setAmount] = useState('');
@@ -58,15 +59,26 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             setAmount('');
             setToAmount('');
             setDate(new Date().toISOString().split('T')[0]);
-            setAccountId(accounts[0]?.id || '');
+            
+            // Set default account and currency/rate
+            const defaultAcc = accounts[0];
+            setAccountId(defaultAcc?.id || '');
+            const defaultCurrency = defaultAcc?.currency || Currency.UAH;
+            setCurrency(defaultCurrency);
+            
+            // Set rate from global rates if available, otherwise 1
+            if (rates && defaultCurrency !== Currency.UAH) {
+                setRate(rates[defaultCurrency]?.toString() || '1');
+            } else {
+                setRate('1');
+            }
+
             setToAccountId('');
             setCategoryId('');
             setNote('');
-            setRate('1');
-            setCurrency(accounts[0]?.currency || Currency.UAH);
         }
     }
-  }, [isOpen, initialData, accounts]);
+  }, [isOpen, initialData, accounts, rates]);
 
   const sourceAccount = accounts.find(a => a.id === accountId);
   const targetAccount = accounts.find(a => a.id === toAccountId);
@@ -94,11 +106,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     let isValid = true;
     
     // Determine expected math based on direction
-    // Case 1: FX Sell (Foreign -> UAH). Rate is UAH/FX. Dst = Src * Rate.
     const isSell = sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH;
-    
-    // Case 2: FX Buy (UAH -> Foreign) or Cross. Rate is UAH/FX or Src/Dst. Dst = Src / Rate.
-    // (Existing logic implies Rate is always "Price of Foreign in UAH" or "Src/Dst")
     
     let calculatedDest = 0;
     
@@ -183,8 +191,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 alert("Вкажіть суму зарахування");
                 return;
             }
-            // Allow submission with warning confirmation if strict validation fails, or just block?
-            // User requested better validation, let's block if widely off.
             if (validationError) {
                 if (!confirm("Суми не сходяться з курсом. Зберегти як є?")) {
                     return;
@@ -237,11 +243,16 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     if (acc) {
         setCurrency(acc.currency);
         
-        // Default Rate Logic
+        // Default Rate Logic: Look up Global Rates first
         if (acc.currency === Currency.UAH) {
             setRate('1');
         } else {
-            setRate(String(acc.currentRate));
+            // Prioritize Global Rates passed via props
+            if (rates && rates[acc.currency]) {
+                setRate(rates[acc.currency].toString());
+            } else {
+                setRate(String(acc.currentRate)); // Fallback to account's historical rate
+            }
         }
         
         // If in transfer mode, ensure toAccount is not same
@@ -253,12 +264,16 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleToAccountChange = (id: string) => {
       setToAccountId(id);
-      // Auto-set rate if target is foreign and source is UAH, use target's rate
+      // Auto-set rate if target is foreign and source is UAH
       const target = accounts.find(a => a.id === id);
       const source = accounts.find(a => a.id === accountId);
       
       if (source && target && source.currency === Currency.UAH && target.currency !== Currency.UAH) {
-          setRate(String(target.currentRate || 1));
+          if (rates && rates[target.currency]) {
+               setRate(rates[target.currency].toString());
+          } else {
+               setRate(String(target.currentRate || 1));
+          }
       }
   };
 
@@ -444,6 +459,18 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                         className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary"
                         placeholder="Курс обміну"
                     />
+                    {rates && rates[currency] && parseFloat(rate) !== rates[currency] && (
+                        <div className="text-xs text-orange-500 mt-1 flex items-center gap-1">
+                            <span>Глобальний курс: {rates[currency]}</span>
+                            <button 
+                                type="button" 
+                                onClick={() => setRate(rates[currency]!.toString())}
+                                className="underline hover:text-orange-600"
+                            >
+                                Використати
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 

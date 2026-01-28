@@ -16,20 +16,6 @@ import { DataManagementModal } from './components/DataManagementModal';
 // Simple UUID generator fallback since we can't install packages freely
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
-const AppIcon = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="32" height="32" rx="8" fill="#10B981"/>
-    <rect x="6" y="8" width="12" height="4" rx="1" fill="#047857"/>
-    <rect x="6" y="14" width="12" height="4" rx="1" fill="#059669"/>
-    <rect x="6" y="20" width="12" height="4" rx="1" fill="#10B981"/>
-    <path d="M24 10C25.3333 10 26 11 26 12.5C26 14 25.3333 14.5 24 14.5C22.6667 14.5 22 14 22 12.5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M24 22C22.6667 22 22 21 22 19.5C22 18 22.6667 17.5 24 17.5C25.3333 17.5 26 18 26 19.5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M24 14.5V17.5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M24 8V10" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M24 22V24" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'accounts' | 'budget'>('overview');
   const [data, setData] = useState<AppData>(INITIAL_DATA);
@@ -50,6 +36,11 @@ export default function App() {
   useEffect(() => {
     const loaded = loadFromStorage();
     
+    // Migration: ensure rates exist
+    if (!loaded.rates) {
+        loaded.rates = INITIAL_DATA.rates;
+    }
+
     // Migration: ensure accounts have types and icons
     if (loaded.accounts) {
        loaded.accounts = loaded.accounts.map(a => {
@@ -138,6 +129,13 @@ export default function App() {
     }
   };
 
+  const reorderAccounts = (newAccounts: Account[]) => {
+      setData(prev => ({
+          ...prev,
+          accounts: newAccounts
+      }));
+  };
+
   const deleteAccount = (id: string) => {
     setData(prev => ({
         ...prev,
@@ -204,6 +202,13 @@ export default function App() {
       alert('Дані успішно імпортовано!');
   };
 
+  const handleUpdateRates = (newRates: Record<string, number>) => {
+      setData(prev => ({
+          ...prev,
+          rates: newRates
+      }));
+  };
+
   // --- Navigation & Filtering Handlers ---
   const handleOverviewCategoryClick = (categoryId: string, date: Date) => {
     setTransactionFilters({
@@ -226,19 +231,10 @@ export default function App() {
   return (
     <div className="h-full flex flex-col bg-gray-50 w-full overflow-hidden relative">
       
-      {/* Header */}
-      <header className="bg-white px-4 py-3 flex justify-between items-center shadow-sm z-20">
-        <div className="flex items-center gap-2">
-           <AppIcon />
-           <h1 className="font-bold text-gray-800 text-lg">budget vs actual</h1>
-        </div>
-        <button onClick={() => setIsDataModalOpen(true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-full">
-            <Settings size={20} />
-        </button>
-      </header>
+      {/* Header removed as requested */}
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden relative w-full">
+      <main className="flex-1 overflow-hidden relative w-full pt-safe">
         {activeTab === 'overview' && (
             <OverviewTab 
                 transactions={data.transactions} 
@@ -260,10 +256,12 @@ export default function App() {
             <AccountsTab 
                 accounts={data.accounts} 
                 transactions={data.transactions}
+                rates={data.rates}
                 onAddAccount={openAddAccount}
                 onEditAccount={openEditAccount}
                 onDeleteAccount={deleteAccount}
                 onSelectAccount={handleAccountSelect}
+                onReorderAccounts={reorderAccounts}
             />
         )}
         {activeTab === 'budget' && (
@@ -294,31 +292,39 @@ export default function App() {
       <nav className="bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-between items-center z-20 pb-4">
         <button 
             onClick={() => setActiveTab('overview')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
-            <LayoutDashboard size={24} strokeWidth={activeTab === 'overview' ? 2.5 : 2} />
+            <LayoutDashboard size={22} strokeWidth={activeTab === 'overview' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Огляд</span>
         </button>
         <button 
             onClick={() => setActiveTab('transactions')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
-            <List size={24} strokeWidth={activeTab === 'transactions' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Транзакції</span>
+            <List size={22} strokeWidth={activeTab === 'transactions' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Транз.</span>
         </button>
         <button 
             onClick={() => setActiveTab('budget')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
-            <Calculator size={24} strokeWidth={activeTab === 'budget' ? 2.5 : 2} />
+            <Calculator size={22} strokeWidth={activeTab === 'budget' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Бюджет</span>
         </button>
         <button 
             onClick={() => setActiveTab('accounts')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[64px] ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
         >
-            <Wallet size={24} strokeWidth={activeTab === 'accounts' ? 2.5 : 2} />
+            <Wallet size={22} strokeWidth={activeTab === 'accounts' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Рахунки</span>
+        </button>
+        {/* Settings moved here */}
+        <button 
+            onClick={() => setIsDataModalOpen(true)}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] text-gray-400 hover:text-gray-600`}
+        >
+            <Settings size={22} />
+            <span className="text-[10px] font-medium">Налашт.</span>
         </button>
       </nav>
 
@@ -330,6 +336,7 @@ export default function App() {
         accounts={data.accounts}
         categories={data.categories}
         initialData={editingTransaction}
+        rates={data.rates}
       />
 
       <AccountModal 
@@ -351,6 +358,7 @@ export default function App() {
         onClose={() => setIsDataModalOpen(false)}
         currentData={data}
         onImport={handleDataImport}
+        onUpdateRates={handleUpdateRates}
       />
     </div>
   );

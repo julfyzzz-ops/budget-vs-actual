@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
-import { X, Download, Copy, Share2, Upload, FileJson, Check, AlertCircle } from 'lucide-react';
-import { AppData } from '../types';
+import React, { useState, useEffect } from 'react';
+import { X, Download, Copy, Share2, Upload, FileJson, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { AppData, Currency } from '../types';
 import { getExportDataString, getExportFileName, triggerBrowserDownload, shareAsText, importDataFromString } from '../services/storageService';
 import { Button } from './ui/Button';
 
@@ -10,18 +10,31 @@ interface DataManagementModalProps {
   onClose: () => void;
   currentData: AppData;
   onImport: (data: AppData) => void;
+  onUpdateRates: (rates: Record<string, number>) => void;
 }
 
 export const DataManagementModal: React.FC<DataManagementModalProps> = ({ 
   isOpen, 
   onClose, 
   currentData, 
-  onImport 
+  onImport,
+  onUpdateRates
 }) => {
-  const [activeTab, setActiveTab] = useState<'export' | 'import'>('export');
+  const [activeTab, setActiveTab] = useState<'rates' | 'export' | 'import'>('rates');
   const [copyStatus, setCopyStatus] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
+
+  // Rates state
+  const [usdRate, setUsdRate] = useState('');
+  const [eurRate, setEurRate] = useState('');
+
+  useEffect(() => {
+      if (isOpen && currentData.rates) {
+          setUsdRate(currentData.rates[Currency.USD]?.toString() || '');
+          setEurRate(currentData.rates[Currency.EUR]?.toString() || '');
+      }
+  }, [isOpen, currentData]);
 
   if (!isOpen) return null;
 
@@ -64,40 +77,102 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
       }
   };
 
+  const saveRates = () => {
+      const newRates = {
+          ...currentData.rates,
+          [Currency.USD]: parseFloat(usdRate) || 0,
+          [Currency.EUR]: parseFloat(eurRate) || 0,
+          [Currency.UAH]: 1
+      };
+      onUpdateRates(newRates);
+      // Optional feedback
+      alert('Курси валют оновлено');
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
       <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800">Керування даними</h2>
+          <h2 className="text-xl font-bold text-gray-800">Налаштування</h2>
           <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
             <X size={20} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex p-4 gap-2">
+        <div className="flex p-2 gap-1 bg-gray-50 border-b border-gray-100">
+            <button 
+                onClick={() => setActiveTab('rates')}
+                className={`flex-1 py-2 rounded-lg font-medium text-xs transition-colors ${activeTab === 'rates' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+            >
+                Курси
+            </button>
             <button 
                 onClick={() => setActiveTab('export')}
-                className={`flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'export' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`flex-1 py-2 rounded-lg font-medium text-xs transition-colors ${activeTab === 'export' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
             >
-                Експорт (Backup)
+                Експорт
             </button>
             <button 
                 onClick={() => setActiveTab('import')}
-                className={`flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === 'import' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`flex-1 py-2 rounded-lg font-medium text-xs transition-colors ${activeTab === 'import' ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
             >
-                Імпорт (Відновлення)
+                Імпорт
             </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 pt-0">
+        <div className="flex-1 overflow-y-auto p-5">
             
+            {activeTab === 'rates' && (
+                <div className="space-y-6">
+                    <p className="text-sm text-gray-500 mb-4">
+                        Встановіть поточні ринкові курси валют. Ці значення будуть використовуватись для відображення загального балансу в гривні та як курс за замовчуванням при створенні нових транзакцій.
+                    </p>
+
+                    <div className="grid gap-4">
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <label className="block text-xs font-bold text-gray-500 mb-1">Курс USD до UAH</label>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-400">1 $ =</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={usdRate}
+                                    onChange={(e) => setUsdRate(e.target.value)}
+                                    className="flex-1 p-2 text-lg font-bold bg-white rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary focus:outline-none"
+                                />
+                                <span className="font-bold text-gray-400">₴</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <label className="block text-xs font-bold text-gray-500 mb-1">Курс EUR до UAH</label>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-400">1 € =</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={eurRate}
+                                    onChange={(e) => setEurRate(e.target.value)}
+                                    className="flex-1 p-2 text-lg font-bold bg-white rounded-lg border border-gray-200 focus:ring-2 focus:ring-primary focus:outline-none"
+                                />
+                                <span className="font-bold text-gray-400">₴</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <Button onClick={saveRates} fullWidth className="py-3 flex items-center justify-center gap-2">
+                        <RefreshCw size={18} /> Зберегти курси
+                    </Button>
+                </div>
+            )}
+
             {activeTab === 'export' && (
                 <div className="space-y-4">
                     <p className="text-sm text-gray-500">
-                        Якщо автоматичне завантаження не працює, скопіюйте код знизу та збережіть його в нотатках.
+                        Збережіть цей файл або текст для резервного копіювання даних.
                     </p>
 
                     {/* Action Buttons */}
