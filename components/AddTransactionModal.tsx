@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Account, Category, Currency, Transaction, TransactionType } from '../types';
 import { Button } from './ui/Button';
 import { X, ArrowRightLeft, AlertCircle, RefreshCw } from 'lucide-react';
@@ -22,7 +22,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [amount, setAmount] = useState('');
   const [toAmount, setToAmount] = useState(''); // New state for destination amount
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [accountId, setAccountId] = useState(accounts[0]?.id || '');
+  const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [currency, setCurrency] = useState<Currency>(Currency.UAH);
@@ -31,6 +31,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   // Validation State
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Filter accounts: show only visible ones, OR the ones currently used in the transaction being edited
+  const visibleAccounts = useMemo(() => {
+    return accounts.filter(a => !a.isHidden || (initialData && (a.id === initialData.accountId || (initialData.type === TransactionType.TRANSFER && a.id === initialData.toAccountId))));
+  }, [accounts, initialData]);
 
   // Initialize form with data
   useEffect(() => {
@@ -60,9 +65,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             setToAmount('');
             setDate(new Date().toISOString().split('T')[0]);
             
-            // Set default account and currency/rate
-            const defaultAcc = accounts[0];
+            // Set default account (from visible only)
+            const activeAccounts = accounts.filter(a => !a.isHidden);
+            const defaultAcc = activeAccounts[0] || accounts[0];
             setAccountId(defaultAcc?.id || '');
+            
             const defaultCurrency = defaultAcc?.currency || Currency.UAH;
             setCurrency(defaultCurrency);
             
@@ -74,11 +81,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             }
 
             setToAccountId('');
-            setCategoryId('');
+            
+            // Set default category for Expense (default type)
+            const defaultCat = categories.find(c => c.type === TransactionType.EXPENSE);
+            setCategoryId(defaultCat?.id || '');
+
             setNote('');
         }
     }
-  }, [isOpen, initialData, accounts, rates]);
+  }, [isOpen, initialData, accounts, rates, categories]);
 
   const sourceAccount = accounts.find(a => a.id === accountId);
   const targetAccount = accounts.find(a => a.id === toAccountId);
@@ -175,6 +186,17 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       }
   };
 
+  const handleTypeChange = (newType: TransactionType) => {
+      setType(newType);
+      
+      // Auto-select first category for the new type
+      if (newType !== TransactionType.TRANSFER) {
+          const firstCat = categories.find(c => c.type === newType);
+          setCategoryId(firstCat?.id || '');
+      } else {
+          setCategoryId('');
+      }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -292,21 +314,21 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <button 
                 type="button"
                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${type === TransactionType.EXPENSE ? 'bg-white shadow text-red-500' : 'text-gray-500 hover:text-gray-700'}`}
-                onClick={() => setType(TransactionType.EXPENSE)}
+                onClick={() => handleTypeChange(TransactionType.EXPENSE)}
             >
                 Витрата
             </button>
             <button 
                 type="button"
                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${type === TransactionType.INCOME ? 'bg-white shadow text-emerald-500' : 'text-gray-500 hover:text-gray-700'}`}
-                onClick={() => setType(TransactionType.INCOME)}
+                onClick={() => handleTypeChange(TransactionType.INCOME)}
             >
                 Дохід
             </button>
             <button 
                 type="button"
                 className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${type === TransactionType.TRANSFER ? 'bg-white shadow text-blue-500' : 'text-gray-500 hover:text-gray-700'}`}
-                onClick={() => setType(TransactionType.TRANSFER)}
+                onClick={() => handleTypeChange(TransactionType.TRANSFER)}
             >
                 Трансфер
             </button>
@@ -324,7 +346,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                             onChange={(e) => handleAccountChange(e.target.value)}
                             className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary text-sm"
                         >
-                            {accounts.map(a => (
+                            {visibleAccounts.map(a => (
                                 <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
                             ))}
                         </select>
@@ -340,7 +362,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                             className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary text-sm"
                         >
                             <option value="">Оберіть...</option>
-                            {accounts.filter(a => a.id !== accountId).map(a => (
+                            {visibleAccounts.filter(a => a.id !== accountId).map(a => (
                                 <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
                             ))}
                         </select>
@@ -354,7 +376,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                         onChange={(e) => handleAccountChange(e.target.value)}
                         className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary"
                     >
-                        {accounts.map(a => (
+                        {visibleAccounts.map(a => (
                             <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>
                         ))}
                     </select>

@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Transaction, Category, TransactionType } from '../types';
-import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, ChevronRight as ChevronRightIcon, Wallet } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 
 interface OverviewTabProps {
@@ -100,12 +100,39 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
 
   const balance = stats.income - stats.expense;
 
-  const renderCategoryList = (title: string, data: typeof stats.expenseData, totalActual: number, totalBudget: number) => {
+  const renderCategoryList = (
+      title: string, 
+      data: typeof stats.expenseData, 
+      totalActual: number, 
+      totalBudget: number,
+      HeaderIcon: React.ElementType,
+      headerColorClass: string
+  ) => {
       return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-700">{title}</h3>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6 animate-fade-in">
+            {/* Optimized Header: Title Left, Totals Right */}
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+               <div className="flex items-center gap-2">
+                    <div className={`p-2 rounded-lg ${headerColorClass} bg-opacity-10`}>
+                        <HeaderIcon size={20} className={headerColorClass.replace('bg-', 'text-')} />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-gray-800 text-lg">{title}</h3>
+                    </div>
+               </div>
+               <div className="text-right">
+                    <div className="text-xl font-extrabold text-gray-900 leading-none">
+                        {totalActual.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} 
+                        <span className="text-sm text-gray-400 font-medium ml-1">₴</span>
+                    </div>
+                    {totalBudget > 0 && (
+                        <div className="text-xs text-gray-400 font-medium mt-1">
+                            з {totalBudget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} ₴
+                        </div>
+                    )}
+               </div>
             </div>
+
             <div className="divide-y divide-gray-50">
                 {data.map((item) => {
                     const percent = item.budget > 0 ? (item.value / item.budget) * 100 : 0;
@@ -113,29 +140,43 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
                     return (
                         <div 
                           key={item.id} 
-                          className="p-3 hover:bg-gray-50 cursor-pointer transition-colors active:bg-gray-100"
+                          className="p-4 hover:bg-gray-50 cursor-pointer transition-colors active:bg-gray-100"
                           onClick={() => onCategoryClick(item.id, currentDate)}
                         >
-                            <div className="flex justify-between text-sm mb-1.5">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: item.color }}>
-                                       <CategoryIcon iconName={item.icon} size={12} />
+                            <div className="flex items-start justify-between mb-3">
+                                {/* Icon & Name */}
+                                <div className="flex items-center gap-3">
+                                    <div 
+                                        className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm shrink-0" 
+                                        style={{ backgroundColor: item.color }}
+                                    >
+                                       <CategoryIcon iconName={item.icon} size={20} />
                                     </div>
-                                    <span className="text-gray-700 font-medium">{item.name}</span>
+                                    <div>
+                                        <div className="font-bold text-gray-800 text-base">{item.name}</div>
+                                        {item.budget > 0 && (
+                                            <div className="text-xs text-gray-400 font-medium">
+                                                Ліміт: {item.budget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-gray-900 font-semibold text-xs sm:text-sm">
-                                      {item.value.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} 
-                                      <span className="text-gray-400 font-normal ml-1">
-                                          / {item.budget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
-                                      </span>
-                                  </span>
-                                  <ChevronRightIcon size={14} className="text-gray-300" />
+
+                                {/* Amount */}
+                                <div className="text-right">
+                                    <div className="font-bold text-gray-900 text-base">
+                                        {item.value.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} <span className="text-xs font-normal text-gray-400">₴</span>
+                                    </div>
+                                    <div className="text-xs font-bold text-gray-300 mt-0.5">
+                                        {percent > 0 ? `${Math.round(percent)}%` : ''}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            
+                            {/* Progress Bar - Thicker and clearer */}
+                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                                 <div 
-                                    className="h-full rounded-full opacity-80"
+                                    className="h-full rounded-full transition-all duration-500"
                                     style={{ 
                                         width: `${Math.min(percent, 100)}%`,
                                         backgroundColor: item.color 
@@ -145,71 +186,60 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
                         </div>
                     );
                 })}
+                 {data.length === 0 && (
+                    <div className="p-6 text-center text-gray-400 text-sm italic">
+                        Категорії відсутні
+                    </div>
+                )}
             </div>
-            {/* Footer Total */}
-            <div className="bg-gray-50 p-3 flex justify-between items-center text-sm border-t border-gray-100">
-                <span className="font-bold text-gray-500">Всього</span>
-                <span className="font-bold text-gray-800">
-                     {totalActual.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} 
-                     <span className="text-gray-400 font-normal ml-1">
-                        / {totalBudget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} ₴
-                     </span>
-                </span>
-            </div>
+            {/* Footer Removed as requested */}
         </div>
       );
   };
 
   return (
-    <div className="pb-32 pt-4 px-4 space-y-4 h-full overflow-y-auto no-scrollbar">
-      {/* Date Control */}
-      <div className="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm">
-        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
-          <ChevronLeft size={20} />
+    <div className="pb-32 pt-4 px-4 h-full overflow-y-auto no-scrollbar bg-gray-50">
+      
+      {/* Date Control - Larger */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm mb-6 border border-gray-100">
+        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+          <ChevronLeft size={24} />
         </button>
-        <h2 className="text-lg font-bold text-gray-800 capitalize">{periodLabel}</h2>
-        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
-          <ChevronRight size={20} />
+        <h2 className="text-xl font-bold text-gray-800 capitalize">{periodLabel}</h2>
+        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+          <ChevronRight size={24} />
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-2">
-        {/* Expenses */}
-        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
-           <span className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
-             <TrendingDown size={12} className="text-red-500" /> Витрати
-           </span>
-           <span className="text-sm sm:text-base font-bold text-gray-900 break-all">
-             {stats.expense.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
-           </span>
-        </div>
-        
-        {/* Income */}
-        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
-           <span className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
-             <TrendingUp size={12} className="text-emerald-500" /> Доходи
-           </span>
-           <span className="text-sm sm:text-base font-bold text-emerald-600 break-all">
-             {stats.income.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
-           </span>
-        </div>
-
-        {/* Net / Balance */}
-        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center text-center">
-           <span className="text-[10px] text-gray-500 uppercase font-bold mb-1 flex items-center gap-1">
-             <Wallet size={12} className="text-blue-500" /> Сальдо
-           </span>
-           <span className={`text-sm sm:text-base font-bold break-all ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
+      {/* Main Balance Hero Card */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
+          <div className="text-sm text-gray-500 font-semibold uppercase tracking-wider mb-1 flex items-center justify-center gap-2">
+             <Wallet size={16} className="text-blue-500" /> Сальдо за місяць
+          </div>
+          <div className={`text-4xl font-black tracking-tight ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
              {balance > 0 ? '+' : ''}{balance.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
-           </span>
-        </div>
+             <span className="text-lg text-gray-400 font-medium ml-2">UAH</span>
+          </div>
       </div>
 
       {/* Lists */}
-      {renderCategoryList('Витрати', stats.expenseData, stats.expense, stats.totalBudgetExpense)}
+      {renderCategoryList(
+          'Витрати', 
+          stats.expenseData, 
+          stats.expense, 
+          stats.totalBudgetExpense,
+          TrendingDown,
+          'bg-red-500' // class for icon styling
+      )}
       
-      {renderCategoryList('Доходи', stats.incomeData, stats.income, stats.totalBudgetIncome)}
+      {renderCategoryList(
+          'Доходи', 
+          stats.incomeData, 
+          stats.income, 
+          stats.totalBudgetIncome,
+          TrendingUp,
+          'bg-emerald-500' // class for icon styling
+      )}
 
     </div>
   );
