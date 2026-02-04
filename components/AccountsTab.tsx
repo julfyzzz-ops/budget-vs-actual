@@ -150,6 +150,10 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
             const rawBalance = getBalance(account);
             const balance = Math.abs(rawBalance) < 0.005 ? 0 : rawBalance;
             const isHidden = !!account.isHidden;
+            
+            // Calculate UAH equivalent for foreign currencies
+            const rate = rates[account.currency] || 1;
+            const balanceInUAH = balance * rate;
 
             return (
               <div 
@@ -172,7 +176,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                             {account.name} 
                             {isHidden && <span className='text-[10px] font-normal text-gray-400 ml-2 border border-gray-200 px-1 rounded'>Приховано</span>}
                         </div>
-                         {/* Show original currency balance if not UAH or generally underneath */}
+                         {/* Show currency badge */}
                          <div className="text-xs text-gray-400 font-medium">
                             {account.currency}
                          </div>
@@ -228,9 +232,16 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                          </div>
                       ) : (
                           /* Main Balance Display */
-                          <div className={`font-bold text-sm whitespace-nowrap ${balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
-                              {balance.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                              <span className="text-xs font-normal text-gray-400 ml-1">{account.currency}</span>
+                          <div className="flex flex-col items-end">
+                              <div className={`font-bold text-sm whitespace-nowrap ${balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
+                                  {balance.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                  <span className="text-xs font-normal text-gray-400 ml-1">{account.currency}</span>
+                              </div>
+                              {account.currency !== Currency.UAH && (
+                                   <div className="text-[10px] text-gray-400 font-medium">
+                                       {balanceInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} UAH
+                                   </div>
+                              )}
                           </div>
                       )}
                  </div>
