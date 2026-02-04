@@ -1,13 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Category, TransactionType } from '../types';
-import { Lock, LockOpen, Plus, Trash2, Pencil, TrendingUp, TrendingDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Lock, LockOpen, Plus, Trash2, Pencil, TrendingUp, TrendingDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 
 interface BudgetTabProps {
   categories: Category[];
-  onAddCategory: () => void;
-  onEditCategory: (category: Category) => void;
+  onAddCategory: (date: Date) => void;
+  onEditCategory: (category: Category, date: Date) => void;
   onDeleteCategory: (id: string) => void;
   onReorderCategories: (categories: Category[]) => void;
 }
@@ -20,6 +20,39 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
   onReorderCategories
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const periodLabel = useMemo(() => {
+    return currentDate.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
+  }, [currentDate]);
+
+  const prevMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  };
+
+  // Helper to resolve budget for a specific date from history
+  const getBudgetForDate = (category: Category, date: Date): number => {
+    if (!category.budgetHistory) return category.monthlyBudget || 0;
+    
+    // Sort keys (YYYY-MM) descending
+    const keys = Object.keys(category.budgetHistory).sort().reverse();
+    const targetKey = date.toISOString().slice(0, 7); // YYYY-MM
+    
+    // Find first key <= targetKey
+    const effectiveKey = keys.find(k => k <= targetKey);
+    
+    if (effectiveKey) return category.budgetHistory[effectiveKey];
+    
+    // Fallback if no history before this date (e.g. creating history for future)
+    // Try to find ANY earliest entry? Or just return 0. 
+    // Usually we want to return the oldest known if we are looking way back? 
+    // Or 0 if it didn't exist? Let's assume 0 if it predates history.
+    return 0;
+  };
 
   const moveCategory = (index: number, direction: 'up' | 'down', groupType: TransactionType) => {
     const income = categories.filter(c => c.type === TransactionType.INCOME);
@@ -42,7 +75,9 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
 
   const renderCategoryGroup = (type: TransactionType, title: string, Icon: React.ElementType) => {
     const group = categories.filter(c => c.type === type);
-    const totalBudget = group.reduce((sum, c) => sum + (c.monthlyBudget || 0), 0);
+    
+    // Calculate totals based on CURRENT view month
+    const totalBudget = group.reduce((sum, c) => sum + getBudgetForDate(c, currentDate), 0);
 
     return (
       <div className="mb-6 animate-fade-in">
@@ -56,7 +91,10 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
         </div>
         
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
-          {group.map((category, index) => (
+          {group.map((category, index) => {
+            const budgetAmount = getBudgetForDate(category, currentDate);
+            
+            return (
             <div key={category.id} className="p-4 flex items-center justify-between group hover:bg-gray-50 transition-colors relative">
                {/* Left Side: Icon & Name */}
                <div className="flex items-center gap-3 overflow-hidden">
@@ -74,12 +112,12 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
                {/* Right Side: Amount & Controls */}
                <div className="flex items-center gap-3 shrink-0">
                    <div className="text-lg font-bold text-gray-900 whitespace-nowrap">
-                        {category.monthlyBudget.toLocaleString('uk-UA')} <span className="text-sm font-medium text-gray-400 ml-1">UAH</span>
+                        {budgetAmount.toLocaleString('uk-UA')} <span className="text-sm font-medium text-gray-400 ml-1">UAH</span>
                    </div>
 
                    {isEditMode && (
                        <div className="flex items-center gap-2 ml-2 pl-3 border-l border-gray-200">
-                           {/* Reorder Controls - Horizontal & Round */}
+                           {/* Reorder Controls */}
                            <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-100">
                                <button 
                                     onClick={() => moveCategory(index, 'up', type)}
@@ -98,14 +136,14 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
                            </div>
 
                            <button 
-                                onClick={() => onEditCategory(category)}
+                                onClick={() => onEditCategory(category, currentDate)}
                                 className="w-9 h-9 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
                             >
                                 <Pencil size={16} />
                             </button>
                             <button 
                                 onClick={() => {
-                                    if(window.confirm(`Видалити категорію "${category.name}"? Це не видалить існуючі транзакції, але вони втратять прив'язку до категорії.`)) {
+                                    if(window.confirm(`Видалити категорію "${category.name}"? Це не видалить існуючі транзакції.`)) {
                                         onDeleteCategory(category.id);
                                     }
                                 }}
@@ -117,7 +155,8 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
                    )}
                </div>
             </div>
-          ))}
+            );
+          })}
           {group.length === 0 && (
               <div className="p-4 text-center text-gray-400 text-sm">
                   Список порожній
@@ -130,6 +169,17 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
 
   return (
     <div className="pb-32 pt-4 px-4 h-full overflow-y-auto no-scrollbar">
+       {/* Date Control */}
+       <div className="flex items-center justify-between bg-white p-2 mb-4 rounded-xl shadow-sm">
+        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
+          <ChevronLeft size={20} />
+        </button>
+        <h2 className="text-lg font-bold text-gray-800 capitalize">{periodLabel}</h2>
+        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
+          <ChevronRight size={20} />
+        </button>
+      </div>
+
        {/* Header with Title and Edit Toggle */}
        <div className="flex items-center justify-between mb-4 px-1">
           <h2 className="text-2xl font-bold text-gray-800">Бюджет</h2>
@@ -147,7 +197,7 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
        {/* Single Add Button at the bottom */}
        {isEditMode && (
           <button 
-            onClick={onAddCategory}
+            onClick={() => onAddCategory(currentDate)}
             className="w-full py-4 mt-2 border-2 border-dashed border-gray-300 rounded-2xl flex items-center justify-center text-gray-500 hover:border-primary hover:text-primary transition-colors bg-white/50 text-lg font-medium"
           >
               <Plus size={24} className="mr-2" /> Додати статтю

@@ -30,6 +30,7 @@ export default function App() {
   
   const [editingAccount, setEditingAccount] = useState<Account | undefined>(undefined);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined);
+  const [editingCategoryDate, setEditingCategoryDate] = useState<Date>(new Date()); // Context for budget editing
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
   
   // Load data on mount
@@ -49,7 +50,6 @@ export default function App() {
            if (!updated.type) updated.type = 'CURRENT';
            if (!updated.currentRate) updated.currentRate = 1;
            if (!updated.icon) {
-               // Heuristic for migration
                const nameLower = updated.name.toLowerCase();
                if (nameLower.includes('карт') || nameLower.includes('card')) updated.icon = 'credit-card';
                else if (nameLower.includes('банк') || nameLower.includes('bank')) updated.icon = 'landmark';
@@ -60,12 +60,20 @@ export default function App() {
        });
     }
 
-    // Migration for categories (ensure monthlyBudget exists)
+    // Migration for categories (budgetHistory)
     if(loaded.categories) {
-        loaded.categories = loaded.categories.map(c => ({
-            ...c,
-            monthlyBudget: c.monthlyBudget !== undefined ? c.monthlyBudget : 0
-        }));
+        loaded.categories = loaded.categories.map(c => {
+            const updated = { ...c };
+            // Ensure budgetHistory exists. If not, migrate monthlyBudget to a history entry in the past.
+            if (!updated.budgetHistory) {
+                updated.budgetHistory = {
+                    '2023-01': c.monthlyBudget || 0
+                };
+            }
+            // Ensure monthlyBudget is still there for types compatibility, though we prioritize history
+            if (updated.monthlyBudget === undefined) updated.monthlyBudget = 0;
+            return updated;
+        });
     }
 
     setData(loaded);
@@ -161,16 +169,50 @@ export default function App() {
 
   // --- Category Handlers ---
   const saveCategory = (catData: Omit<Category, 'id'> | Category) => {
+    // Determine the month key for the current editing context
+    const monthKey = editingCategoryDate.toISOString().slice(0, 7); // "YYYY-MM"
+
     if ('id' in catData) {
         setData(prev => ({
             ...prev,
-            categories: prev.categories.map(c => c.id === catData.id ? catData as Category : c)
+            categories: prev.categories.map(c => {
+                if (c.id === catData.id) {
+                    const newBudget = catData.monthlyBudget;
+                    const oldHistory = c.budgetHistory || {};
+                    
+                    // Logic: Update history for this month. 
+                    // To "Apply to subsequent months", we delete any future explicit overrides.
+                    // This way, future months will fall back to finding *this* new entry as the most recent one.
+                    const newHistory = { ...oldHistory };
+                    
+                    // 1. Set current month
+                    newHistory[monthKey] = newBudget;
+
+                    // 2. Delete all future keys
+                    Object.keys(newHistory).forEach(key => {
+                        if (key > monthKey) {
+                            delete newHistory[key];
+                        }
+                    });
+
+                    return {
+                        ...catData,
+                        budgetHistory: newHistory
+                    } as Category;
+                }
+                return c;
+            })
         }));
     } else {
+        // New Category
         const newCat: Category = {
             ...catData,
-            id: generateId()
-        };
+            id: generateId(),
+            budgetHistory: {
+                [monthKey]: catData.monthlyBudget // Start history from current view month
+            }
+        } as Category;
+
         setData(prev => ({
             ...prev,
             categories: [...prev.categories, newCat]
@@ -192,12 +234,14 @@ export default function App() {
     }));
   };
 
-  const openAddCategory = () => {
+  const openAddCategory = (date: Date) => {
+      setEditingCategoryDate(date);
       setEditingCategory(undefined);
       setIsCategoryModalOpen(true);
   };
 
-  const openEditCategory = (cat: Category) => {
+  const openEditCategory = (cat: Category, date: Date) => {
+      setEditingCategoryDate(date);
       setEditingCategory(cat);
       setIsCategoryModalOpen(true);
   };
@@ -236,8 +280,6 @@ export default function App() {
   return (
     <div className="h-full flex flex-col bg-gray-50 w-full overflow-hidden relative">
       
-      {/* Header removed as requested */}
-
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden relative w-full pt-safe">
         {activeTab === 'overview' && (
@@ -324,7 +366,6 @@ export default function App() {
             <Wallet size={22} strokeWidth={activeTab === 'accounts' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Рахунки</span>
         </button>
-        {/* Settings moved here */}
         <button 
             onClick={() => setIsDataModalOpen(true)}
             className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] text-gray-400 hover:text-gray-600`}
@@ -355,22 +396,9 @@ export default function App() {
       <CategoryModal 
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
-        onSave={saveAccount} // Bug fix: passing saveAccount for category fix, wait, saveCategory is separate
-        // Wait, saveCategory was passed correctly before?
-        // Checking App.tsx content above...
-        // Ah, in previous file content it was: onSave={saveCategory}. 
-        // In the updated content above I wrote onSave={saveAccount} by mistake in CategoryModal props?
-        // Let me double check the App.tsx content I just wrote above.
-        // Yes, in the App.tsx content block above I wrote <CategoryModal ... onSave={saveAccount} />. This is a BUG. 
-        // I need to correct it to saveCategory.
-        // Also passing toggleAccountVisibility to AccountsTab.
-      />
-
-      <CategoryModal 
-        isOpen={isCategoryModalOpen}
-        onClose={() => setIsCategoryModalOpen(false)}
-        onSave={saveCategory} // CORRECTED
+        onSave={saveCategory}
         initialData={editingCategory}
+        targetDate={editingCategoryDate} // Pass date context
       />
 
       <DataManagementModal

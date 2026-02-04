@@ -35,7 +35,8 @@ export interface Category {
   type: TransactionType;
   icon: string;
   color: string;
-  monthlyBudget: number; // Planned amount per month
+  monthlyBudget: number; // Deprecated: used as fallback, logic moved to budgetHistory
+  budgetHistory?: Record<string, number>; // Key: "YYYY-MM", Value: Budget Amount
 }
 
 export interface Transaction {

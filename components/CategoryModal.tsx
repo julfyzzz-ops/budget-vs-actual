@@ -10,29 +10,44 @@ interface CategoryModalProps {
   onClose: () => void;
   onSave: (category: Omit<Category, 'id'> | Category) => void;
   initialData?: Category;
+  targetDate?: Date;
 }
 
 const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#6b7280', '#000000'];
 
-export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onSave, initialData, targetDate = new Date() }) => {
   const [name, setName] = useState('');
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [monthlyBudget, setMonthlyBudget] = useState('0');
   const [color, setColor] = useState(COLORS[0]);
   const [icon, setIcon] = useState('shopping-cart');
 
+  const monthLabel = targetDate.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' });
+
+  // Helper to resolve budget from history
+  const getBudgetForDate = (category: Category, date: Date): number => {
+    if (!category.budgetHistory) return category.monthlyBudget || 0;
+    const keys = Object.keys(category.budgetHistory).sort().reverse();
+    const targetKey = date.toISOString().slice(0, 7);
+    const effectiveKey = keys.find(k => k <= targetKey);
+    return effectiveKey ? category.budgetHistory[effectiveKey] : 0;
+  };
+
   useEffect(() => {
     if (initialData) {
       setName(initialData.name);
       setType(initialData.type);
-      setMonthlyBudget(initialData.monthlyBudget.toString());
+      
+      // Load budget specifically for the target date
+      const budgetForMonth = getBudgetForDate(initialData, targetDate);
+      setMonthlyBudget(budgetForMonth.toString());
+      
       setColor(initialData.color);
-      // Ensure the icon exists in our map, otherwise fallback
       setIcon(ICON_MAP[initialData.icon] ? initialData.icon : 'shopping-cart');
     } else {
       resetForm();
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, targetDate]);
 
   const resetForm = () => {
     setName('');
@@ -105,7 +120,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
 
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">
-                {type === TransactionType.EXPENSE ? 'Місячний ліміт (План)' : 'Очікуваний дохід'}
+                {type === TransactionType.EXPENSE ? `Місячний ліміт на ${monthLabel}` : `Очікуваний дохід на ${monthLabel}`}
             </label>
             <input
               type="number"
@@ -114,6 +129,9 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
               onChange={(e) => setMonthlyBudget(e.target.value)}
               className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary"
             />
+            <p className="text-[10px] text-gray-400 mt-1">
+                Зміни будуть застосовані до цього місяця та всіх наступних.
+            </p>
           </div>
 
           <div>
