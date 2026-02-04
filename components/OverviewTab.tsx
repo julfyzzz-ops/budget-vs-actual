@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Transaction, Category, TransactionType } from '../types';
-import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 
 interface OverviewTabProps {
@@ -110,25 +110,27 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
   ) => {
       return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6 animate-fade-in">
-            {/* Optimized Header: Title Left, Totals Right */}
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            {/* Header: Title Left, Totals Right */}
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                <div className="flex items-center gap-2">
-                    <div className={`p-2 rounded-lg ${headerColorClass} bg-opacity-10`}>
-                        <HeaderIcon size={20} className={headerColorClass.replace('bg-', 'text-')} />
+                    <div className={`p-1.5 rounded-lg ${headerColorClass} bg-opacity-10`}>
+                        <HeaderIcon size={18} className={headerColorClass.replace('bg-', 'text-')} />
                     </div>
                     <div>
-                        <h3 className="font-bold text-gray-800 text-lg">{title}</h3>
+                        <h3 className="font-bold text-gray-800 text-base">{title}</h3>
                     </div>
                </div>
-               <div className="text-right">
-                    <div className="text-xl font-extrabold text-gray-900 leading-none">
+               <div className="text-right whitespace-nowrap">
+                    <span className="text-lg font-bold text-gray-900 leading-none">
                         {totalActual.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} 
-                        <span className="text-sm text-gray-400 font-medium ml-1">₴</span>
-                    </div>
+                    </span>
                     {totalBudget > 0 && (
-                        <div className="text-xs text-gray-400 font-medium mt-1">
-                            з {totalBudget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} ₴
-                        </div>
+                        <>
+                            <span className="text-gray-400 mx-1 text-lg font-light">/</span>
+                            <span className="text-gray-900 text-lg font-bold">
+                                {totalBudget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
+                            </span>
+                        </>
                     )}
                </div>
             </div>
@@ -140,82 +142,81 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
                     return (
                         <div 
                           key={item.id} 
-                          className="p-4 hover:bg-gray-50 cursor-pointer transition-colors active:bg-gray-100"
+                          className="p-3 hover:bg-gray-50 cursor-pointer transition-colors active:bg-gray-100"
                           onClick={() => onCategoryClick(item.id, currentDate)}
                         >
-                            <div className="flex items-start justify-between mb-3">
-                                {/* Icon & Name */}
-                                <div className="flex items-center gap-3">
-                                    <div 
-                                        className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm shrink-0" 
-                                        style={{ backgroundColor: item.color }}
-                                    >
-                                       <CategoryIcon iconName={item.icon} size={20} />
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-gray-800 text-base">{item.name}</div>
-                                        {item.budget > 0 && (
-                                            <div className="text-xs text-gray-400 font-medium">
-                                                Ліміт: {item.budget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Amount */}
-                                <div className="text-right">
-                                    <div className="font-bold text-gray-900 text-base">
-                                        {item.value.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} <span className="text-xs font-normal text-gray-400">₴</span>
-                                    </div>
-                                    <div className="text-xs font-bold text-gray-300 mt-0.5">
-                                        {percent > 0 ? `${Math.round(percent)}%` : ''}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* Progress Bar - Thicker and clearer */}
-                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="flex items-center gap-3">
+                                {/* Icon */}
                                 <div 
-                                    className="h-full rounded-full transition-all duration-500"
-                                    style={{ 
-                                        width: `${Math.min(percent, 100)}%`,
-                                        backgroundColor: item.color 
-                                    }}
-                                />
+                                    className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm shrink-0" 
+                                    style={{ backgroundColor: item.color }}
+                                >
+                                   <CategoryIcon iconName={item.icon} size={20} />
+                                </div>
+                                
+                                {/* Right Content Area */}
+                                <div className="flex-1 min-w-0">
+                                    {/* Top Row: Name and Numbers */}
+                                    <div className="flex justify-between items-center mb-1">
+                                        <div className="font-bold text-gray-800 text-sm truncate pr-2">
+                                            {item.name}
+                                        </div>
+                                        <div className="text-right whitespace-nowrap">
+                                            <span className="font-bold text-gray-900 text-sm">
+                                                {item.value.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
+                                            </span>
+                                            {item.budget > 0 && (
+                                                <>
+                                                    <span className="text-gray-400 mx-1 text-sm font-light">/</span>
+                                                    <span className="text-gray-900 font-bold text-sm">
+                                                        {item.budget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Bottom Row: Progress Bar */}
+                                    <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full rounded-full transition-all duration-500"
+                                            style={{ 
+                                                width: item.budget > 0 ? `${Math.min(percent, 100)}%` : '0%',
+                                                backgroundColor: item.color 
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     );
                 })}
                  {data.length === 0 && (
-                    <div className="p-6 text-center text-gray-400 text-sm italic">
+                    <div className="p-4 text-center text-gray-400 text-xs italic">
                         Категорії відсутні
                     </div>
                 )}
             </div>
-            {/* Footer Removed as requested */}
         </div>
       );
   };
 
   return (
-    <div className="pb-32 pt-4 px-4 h-full overflow-y-auto no-scrollbar bg-gray-50">
+    <div className="pb-32 pt-2 px-4 h-full overflow-y-auto no-scrollbar bg-gray-50">
       
-      {/* Date Control - Larger */}
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm mb-6 border border-gray-100">
+      {/* Date Control - Compact */}
+      <div className="flex items-center justify-between bg-white p-2 rounded-xl shadow-sm mb-2 border border-gray-100">
         <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
           <ChevronLeft size={24} />
         </button>
-        <h2 className="text-xl font-bold text-gray-800 capitalize">{periodLabel}</h2>
+        <h2 className="text-lg font-bold text-gray-800 capitalize">{periodLabel}</h2>
         <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
           <ChevronRight size={24} />
         </button>
       </div>
 
-      {/* Main Balance Hero Card */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
-          <div className="text-sm text-gray-500 font-semibold uppercase tracking-wider mb-1 flex items-center justify-center gap-2">
-             <Wallet size={16} className="text-blue-500" /> Сальдо за місяць
-          </div>
+      {/* Main Balance Hero Card - Compact */}
+      <div className="bg-white rounded-2xl p-2 shadow-sm border border-gray-100 mb-4 text-center">
           <div className={`text-4xl font-black tracking-tight ${balance >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
              {balance > 0 ? '+' : ''}{balance.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
              <span className="text-lg text-gray-400 font-medium ml-2">UAH</span>

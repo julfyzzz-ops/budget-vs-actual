@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Account, AccountType, Currency, Transaction, TransactionType } from '../types';
-import { Lock, LockOpen, Trash2, Pencil, Plus, Banknote, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
+import { Lock, LockOpen, Trash2, Pencil, Plus, Banknote, ArrowUp, ArrowDown, Eye, EyeOff, Wallet, PiggyBank, CreditCard } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -73,12 +73,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   const getGroupTotalInUAH = (type: AccountType) => {
     const group = groupAccounts(type);
     return group.reduce((sum, account) => {
-        // Skip hidden accounts in total calculation if strictly in "view" mode, 
-        // BUT usually hidden accounts still count towards net worth, they are just hidden from UI.
-        // However, standard behavior for "Hide" is usually "Archive/Ignore".
-        // Let's keep them in total if user wants to see them in edit mode, 
-        // but typically if hidden, they shouldn't clutter the total view either.
-        // Let's exclude hidden accounts from total if not in edit mode to be consistent.
+        // Skip hidden accounts in total calculation if strictly in "view" mode
         if (!isEditMode && account.isHidden) return sum;
 
         const balance = getBalance(account);
@@ -112,7 +107,12 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
       onReorderAccounts([...current, ...savings, ...debt]);
   };
 
-  const renderAccountGroup = (title: string, type: AccountType) => {
+  const renderAccountGroup = (
+      title: string, 
+      type: AccountType,
+      Icon: React.ElementType,
+      headerColorClass: string
+  ) => {
     let group = groupAccounts(type);
     
     // Filter hidden accounts if not in edit mode
@@ -126,31 +126,30 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
     const totalInUAH = getGroupTotalInUAH(type);
 
     return (
-      <div className="mb-6 animate-fade-in">
-        <div className="flex justify-between items-end mb-3 px-1">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">{title}</h3>
-            <span className="text-sm font-bold text-gray-400">
-                 {totalInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} UAH
-            </span>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6 animate-fade-in">
+        {/* Header: Title Left, Totals Right (Matching Overview/Budget Style) */}
+        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+           <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded-lg ${headerColorClass} bg-opacity-10`}>
+                    <Icon size={18} className={headerColorClass.replace('bg-', 'text-')} />
+                </div>
+                <div>
+                    <h3 className="font-bold text-gray-800 text-base">{title}</h3>
+                </div>
+           </div>
+           <div className="text-right whitespace-nowrap">
+                <span className="text-lg font-bold text-gray-900 leading-none">
+                    {totalInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} 
+                    <span className="text-xs font-medium text-gray-400 ml-1">UAH</span>
+                </span>
+           </div>
         </div>
         
-        <div className="grid grid-cols-1 gap-3">
+        <div className="divide-y divide-gray-50">
           {group.map((account, index) => {
             const rawBalance = getBalance(account);
-            // Fix for -0 display. If abs(balance) is very small, treat as 0.
             const balance = Math.abs(rawBalance) < 0.005 ? 0 : rawBalance;
-
-            // Use global rate for display calculation
-            const currentRate = rates[account.currency] || 1;
-            const balanceInUAH = account.currency !== Currency.UAH 
-                ? balance * currentRate
-                : null;
-            
-            // Generate a subtle background color and border color
-            // If hidden in edit mode, make it look "inactive" (grayscale or faded)
             const isHidden = !!account.isHidden;
-            const bgColor = isHidden ? '#f3f4f6' : (account.color + '10'); // Gray if hidden, Color if visible
-            const borderColor = isHidden ? '#9ca3af' : account.color;
 
             return (
               <div 
@@ -158,91 +157,82 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 onClick={() => {
                     if (!isEditMode) onSelectAccount(account.id);
                 }}
-                className={`rounded-xl shadow-sm border border-gray-100 relative overflow-hidden group transition-all ${!isEditMode ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''} ${isHidden ? 'opacity-75' : ''}`}
-                style={{ 
-                    background: `linear-gradient(110deg, white 40%, ${bgColor} 100%)`,
-                    borderLeft: `5px solid ${borderColor}`
-                }}
+                className={`p-3 flex items-center justify-between group hover:bg-gray-50 transition-colors relative ${!isEditMode ? 'cursor-pointer active:bg-gray-100' : ''} ${isHidden ? 'opacity-60 bg-gray-50' : ''}`}
               >
-                 <div className="flex items-center justify-between p-4 relative z-10">
-                   {/* Left Side: Icon & Name */}
-                   <div className="flex items-center gap-3 overflow-hidden">
-                      <div 
-                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${isHidden ? 'bg-gray-400' : ''}`}
-                        style={{ backgroundColor: isHidden ? undefined : account.color }}
-                      >
-                          <CategoryIcon iconName={account.icon || 'wallet'} size={20} />
-                      </div>
-                      <div className="min-w-0">
-                          <h3 className={`font-bold text-base truncate pr-2 ${isHidden ? 'text-gray-500' : 'text-gray-800'}`}>
-                              {account.name} {isHidden && <span className='text-xs font-normal text-gray-400'>(Приховано)</span>}
-                          </h3>
-                          {balanceInUAH !== null && (
-                            <div className="text-xs font-medium text-gray-400 mt-0.5">
-                                {balanceInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} UAH
-                            </div>
-                           )}
-                      </div>
-                   </div>
+                 {/* Left Side: Icon & Name */}
+                 <div className="flex items-center gap-3 overflow-hidden flex-1">
+                    <div 
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${isHidden ? 'bg-gray-400' : ''}`}
+                      style={{ backgroundColor: isHidden ? undefined : account.color }}
+                    >
+                        <CategoryIcon iconName={account.icon || 'wallet'} size={20} />
+                    </div>
+                    <div className="min-w-0">
+                        <div className={`font-bold text-sm truncate pr-2 ${isHidden ? 'text-gray-500' : 'text-gray-800'}`}>
+                            {account.name} 
+                            {isHidden && <span className='text-[10px] font-normal text-gray-400 ml-2 border border-gray-200 px-1 rounded'>Приховано</span>}
+                        </div>
+                         {/* Show original currency balance if not UAH or generally underneath */}
+                         <div className="text-xs text-gray-400 font-medium">
+                            {account.currency}
+                         </div>
+                    </div>
+                 </div>
 
-                   {/* Right Side: Balances or Controls */}
-                   <div className="flex items-center gap-3 text-right shrink-0">
-                        {isEditMode ? (
-                           <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm p-1 rounded-full border border-gray-200 shadow-sm">
-                               {/* Visibility Toggle */}
-                               <button 
-                                    onClick={(e) => { e.stopPropagation(); onToggleVisibility(account); }}
-                                    className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:bg-white"
-                               >
-                                   {account.isHidden ? <EyeOff size={16} className="text-gray-400" /> : <Eye size={16} className="text-black" />}
-                               </button>
+                 {/* Right Side: Balances or Controls */}
+                 <div className="flex items-center gap-3 shrink-0">
+                      {isEditMode ? (
+                         <div className="flex items-center gap-2 ml-2 pl-3 border-l border-gray-200">
+                             {/* Reorder Controls */}
+                             <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-lg border border-gray-100">
+                                 <button 
+                                      onClick={(e) => { e.stopPropagation(); moveAccount(index, 'up', type); }}
+                                      disabled={index === 0}
+                                      className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white hover:shadow-sm rounded bg-transparent disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                                 >
+                                     <ArrowUp size={14} strokeWidth={2.5} />
+                                 </button>
+                                 <button 
+                                      onClick={(e) => { e.stopPropagation(); moveAccount(index, 'down', type); }}
+                                      disabled={index === group.length - 1}
+                                      className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white hover:shadow-sm rounded bg-transparent disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                                 >
+                                     <ArrowDown size={14} strokeWidth={2.5} />
+                                 </button>
+                             </div>
 
-                               <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                             <button 
+                                  onClick={(e) => { e.stopPropagation(); onToggleVisibility(account); }}
+                                  className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${account.isHidden ? 'bg-gray-100 text-gray-500' : 'bg-white text-gray-400 hover:text-black border border-gray-100'}`}
+                             >
+                                 {account.isHidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                             </button>
 
-                               {/* Reorder Controls */}
-                               <button 
-                                    onClick={(e) => { e.stopPropagation(); moveAccount(index, 'up', type); }}
-                                    disabled={index === 0}
-                                    className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white rounded-full disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-                               >
-                                   <ArrowUp size={16} strokeWidth={2.5} />
-                               </button>
-                               <button 
-                                    onClick={(e) => { e.stopPropagation(); moveAccount(index, 'down', type); }}
-                                    disabled={index === group.length - 1}
-                                    className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white rounded-full disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-                               >
-                                   <ArrowDown size={16} strokeWidth={2.5} />
-                               </button>
-                               
-                               <div className="w-px h-4 bg-gray-300 mx-1"></div>
-
-                               <button 
-                                    onClick={(e) => { e.stopPropagation(); onEditAccount(account); }}
-                                    className="w-8 h-8 flex items-center justify-center text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                                >
-                                    <Pencil size={16} />
-                                </button>
-                                <button 
-                                    onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        if(window.confirm('Видалити цей рахунок та всі його транзакції?')) {
-                                            onDeleteAccount(account.id);
-                                        }
-                                    }}
-                                    className="w-8 h-8 flex items-center justify-center text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                           </div>
-                        ) : (
-                            /* Main Balance Display */
-                            <div className={`text-lg font-bold tracking-tight whitespace-nowrap ${balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
-                                {balance.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                                <span className="text-sm font-medium text-gray-500 ml-1">{account.currency}</span>
-                            </div>
-                        )}
-                   </div>
+                             <button 
+                                  onClick={(e) => { e.stopPropagation(); onEditAccount(account); }}
+                                  className="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
+                              >
+                                  <Pencil size={14} />
+                              </button>
+                              <button 
+                                  onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      if(window.confirm('Видалити цей рахунок та всі його транзакції?')) {
+                                          onDeleteAccount(account.id);
+                                      }
+                                  }}
+                                  className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition-colors"
+                              >
+                                  <Trash2 size={14} />
+                              </button>
+                         </div>
+                      ) : (
+                          /* Main Balance Display */
+                          <div className={`font-bold text-sm whitespace-nowrap ${balance < 0 ? 'text-red-500' : 'text-gray-900'}`}>
+                              {balance.toLocaleString('uk-UA', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                              <span className="text-xs font-normal text-gray-400 ml-1">{account.currency}</span>
+                          </div>
+                      )}
                  </div>
               </div>
             );
@@ -253,7 +243,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   };
 
   return (
-    <div className="pb-32 pt-4 px-4 relative h-full overflow-y-auto no-scrollbar">
+    <div className="pb-32 pt-4 px-4 relative h-full overflow-y-auto no-scrollbar bg-gray-50">
        {/* Header with Title and Edit Toggle */}
        <div className="flex items-center justify-between mb-4 px-1">
           <h2 className="text-2xl font-bold text-gray-800">Рахунки</h2>
@@ -265,9 +255,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
           </button>
       </div>
 
-      {renderAccountGroup('Поточні', AccountType.CURRENT)}
-      {renderAccountGroup('Заощадження', AccountType.SAVINGS)}
-      {renderAccountGroup('Заборгованість', AccountType.DEBT)}
+      {renderAccountGroup('Поточні', AccountType.CURRENT, Wallet, 'bg-blue-500')}
+      {renderAccountGroup('Заощадження', AccountType.SAVINGS, PiggyBank, 'bg-emerald-500')}
+      {renderAccountGroup('Заборгованість', AccountType.DEBT, CreditCard, 'bg-red-500')}
 
       {/* Single Add Button at the bottom */}
       {isEditMode && (

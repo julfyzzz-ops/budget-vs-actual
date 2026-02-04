@@ -47,10 +47,6 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
     
     if (effectiveKey) return category.budgetHistory[effectiveKey];
     
-    // Fallback if no history before this date (e.g. creating history for future)
-    // Try to find ANY earliest entry? Or just return 0. 
-    // Usually we want to return the oldest known if we are looking way back? 
-    // Or 0 if it didn't exist? Let's assume 0 if it predates history.
     return 0;
   };
 
@@ -73,93 +69,116 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
     onReorderCategories([...income, ...expense]);
   };
 
-  const renderCategoryGroup = (type: TransactionType, title: string, Icon: React.ElementType) => {
+  const renderCategoryGroup = (
+      type: TransactionType, 
+      title: string, 
+      Icon: React.ElementType,
+      headerColorClass: string
+  ) => {
     const group = categories.filter(c => c.type === type);
     
     // Calculate totals based on CURRENT view month
     const totalBudget = group.reduce((sum, c) => sum + getBudgetForDate(c, currentDate), 0);
 
     return (
-      <div className="mb-6 animate-fade-in">
-        <div className="flex justify-between items-end mb-3 px-1">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                <Icon size={16} /> {title}
-            </h3>
-            <span className="text-sm font-bold text-gray-700">
-                {totalBudget.toLocaleString('uk-UA')} UAH / міс
-            </span>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6 animate-fade-in">
+        {/* Header: Title Left, Totals Right (Matching Overview Style) */}
+        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+           <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded-lg ${headerColorClass} bg-opacity-10`}>
+                    <Icon size={18} className={headerColorClass.replace('bg-', 'text-')} />
+                </div>
+                <div>
+                    <h3 className="font-bold text-gray-800 text-base">{title}</h3>
+                </div>
+           </div>
+           <div className="text-right whitespace-nowrap">
+                <span className="text-lg font-bold text-gray-900 leading-none">
+                    {totalBudget.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
+                </span>
+           </div>
         </div>
-        
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
+
+        <div className="divide-y divide-gray-50">
           {group.map((category, index) => {
             const budgetAmount = getBudgetForDate(category, currentDate);
             
             return (
-            <div key={category.id} className="p-4 flex items-center justify-between group hover:bg-gray-50 transition-colors relative">
+            <div 
+                key={category.id} 
+                className="p-3 flex items-center justify-between group hover:bg-gray-50 transition-colors relative"
+                onClick={() => isEditMode ? onEditCategory(category, currentDate) : null}
+            >
                {/* Left Side: Icon & Name */}
-               <div className="flex items-center gap-3 overflow-hidden">
+               <div className="flex items-center gap-3 overflow-hidden flex-1">
                   <div 
                     className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm"
                     style={{ backgroundColor: category.color }}
                   >
                     <CategoryIcon iconName={category.icon} size={20} />
                   </div>
-                  <div className="font-bold text-gray-800 text-base truncate pr-2">
+                  <div className="font-bold text-gray-800 text-sm truncate pr-2">
                     {category.name}
                   </div>
                </div>
 
                {/* Right Side: Amount & Controls */}
                <div className="flex items-center gap-3 shrink-0">
-                   <div className="text-lg font-bold text-gray-900 whitespace-nowrap">
-                        {budgetAmount.toLocaleString('uk-UA')} <span className="text-sm font-medium text-gray-400 ml-1">UAH</span>
-                   </div>
+                   {!isEditMode && (
+                       <div className="text-sm font-bold text-gray-900 whitespace-nowrap">
+                            {budgetAmount.toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
+                       </div>
+                   )}
 
-                   {isEditMode && (
+                   {isEditMode ? (
                        <div className="flex items-center gap-2 ml-2 pl-3 border-l border-gray-200">
                            {/* Reorder Controls */}
-                           <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-full border border-gray-100">
+                           <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-lg border border-gray-100">
                                <button 
-                                    onClick={() => moveCategory(index, 'up', type)}
+                                    onClick={(e) => { e.stopPropagation(); moveCategory(index, 'up', type); }}
                                     disabled={index === 0}
-                                    className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white hover:shadow-sm rounded-full disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                                    className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white hover:shadow-sm rounded bg-transparent disabled:opacity-30 disabled:hover:bg-transparent transition-all"
                                >
                                    <ArrowUp size={14} strokeWidth={2.5} />
                                </button>
                                <button 
-                                    onClick={() => moveCategory(index, 'down', type)}
+                                    onClick={(e) => { e.stopPropagation(); moveCategory(index, 'down', type); }}
                                     disabled={index === group.length - 1}
-                                    className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white hover:shadow-sm rounded-full disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+                                    className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-primary hover:bg-white hover:shadow-sm rounded bg-transparent disabled:opacity-30 disabled:hover:bg-transparent transition-all"
                                >
                                    <ArrowDown size={14} strokeWidth={2.5} />
                                </button>
                            </div>
 
                            <button 
-                                onClick={() => onEditCategory(category, currentDate)}
-                                className="w-9 h-9 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
+                                onClick={(e) => { e.stopPropagation(); onEditCategory(category, currentDate); }}
+                                className="w-8 h-8 flex items-center justify-center bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
                             >
-                                <Pencil size={16} />
+                                <Pencil size={14} />
                             </button>
                             <button 
-                                onClick={() => {
+                                onClick={(e) => {
+                                    e.stopPropagation();
                                     if(window.confirm(`Видалити категорію "${category.name}"? Це не видалить існуючі транзакції.`)) {
                                         onDeleteCategory(category.id);
                                     }
                                 }}
-                                className="w-9 h-9 flex items-center justify-center bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition-colors"
+                                className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition-colors"
                             >
-                                <Trash2 size={16} />
+                                <Trash2 size={14} />
                             </button>
                        </div>
+                   ) : (
+                       /* Show nothing extra in non-edit mode, just the amount above */
+                       null
                    )}
                </div>
             </div>
             );
           })}
           {group.length === 0 && (
-              <div className="p-4 text-center text-gray-400 text-sm">
-                  Список порожній
+              <div className="p-4 text-center text-gray-400 text-xs italic">
+                  Категорії відсутні
               </div>
           )}
         </div>
@@ -168,15 +187,15 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
   };
 
   return (
-    <div className="pb-32 pt-4 px-4 h-full overflow-y-auto no-scrollbar">
-       {/* Date Control */}
-       <div className="flex items-center justify-between bg-white p-2 mb-4 rounded-xl shadow-sm">
-        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
-          <ChevronLeft size={20} />
+    <div className="pb-32 pt-2 px-4 h-full overflow-y-auto no-scrollbar bg-gray-50">
+       {/* Date Control - Compact */}
+       <div className="flex items-center justify-between bg-white p-2 mb-2 rounded-xl shadow-sm border border-gray-100">
+        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+          <ChevronLeft size={24} />
         </button>
         <h2 className="text-lg font-bold text-gray-800 capitalize">{periodLabel}</h2>
-        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600">
-          <ChevronRight size={20} />
+        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors">
+          <ChevronRight size={24} />
         </button>
       </div>
 
@@ -191,8 +210,8 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
           </button>
       </div>
 
-       {renderCategoryGroup(TransactionType.INCOME, 'Доходи', TrendingUp)}
-       {renderCategoryGroup(TransactionType.EXPENSE, 'Витрати', TrendingDown)}
+       {renderCategoryGroup(TransactionType.INCOME, 'Доходи', TrendingUp, 'bg-emerald-500')}
+       {renderCategoryGroup(TransactionType.EXPENSE, 'Витрати', TrendingDown, 'bg-red-500')}
 
        {/* Single Add Button at the bottom */}
        {isEditMode && (
