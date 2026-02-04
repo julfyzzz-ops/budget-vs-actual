@@ -26,6 +26,7 @@ export interface Account {
   icon: string; // Icon name from CategoryIcon map
   type: AccountType;
   currentRate: number; // Legacy, but kept for compatibility. UI now prefers AppData.rates
+  isHidden?: boolean; // New property for visibility toggle
 }
 
 export interface Category {

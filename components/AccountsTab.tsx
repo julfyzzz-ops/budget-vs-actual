@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Account, AccountType, Currency, Transaction, TransactionType } from '../types';
-import { Lock, LockOpen, Trash2, Pencil, Plus, Banknote, ArrowUp, ArrowDown } from 'lucide-react';
+import { Lock, LockOpen, Trash2, Pencil, Plus, Banknote, ArrowUp, ArrowDown, Eye, EyeOff } from 'lucide-react';
 import { Button } from './ui/Button';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -14,6 +14,7 @@ interface AccountsTabProps {
   onDeleteAccount: (id: string) => void;
   onSelectAccount: (accountId: string) => void;
   onReorderAccounts: (accounts: Account[]) => void;
+  onToggleVisibility: (account: Account) => void;
 }
 
 export const AccountsTab: React.FC<AccountsTabProps> = ({ 
@@ -24,7 +25,8 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   onEditAccount,
   onDeleteAccount,
   onSelectAccount,
-  onReorderAccounts
+  onReorderAccounts,
+  onToggleVisibility
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -71,6 +73,14 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   const getGroupTotalInUAH = (type: AccountType) => {
     const group = groupAccounts(type);
     return group.reduce((sum, account) => {
+        // Skip hidden accounts in total calculation if strictly in "view" mode, 
+        // BUT usually hidden accounts still count towards net worth, they are just hidden from UI.
+        // However, standard behavior for "Hide" is usually "Archive/Ignore".
+        // Let's keep them in total if user wants to see them in edit mode, 
+        // but typically if hidden, they shouldn't clutter the total view either.
+        // Let's exclude hidden accounts from total if not in edit mode to be consistent.
+        if (!isEditMode && account.isHidden) return sum;
+
         const balance = getBalance(account);
         // Convert to UAH approximation using GLOBAL RATES from settings
         const rate = rates[account.currency] || 1;
@@ -103,9 +113,14 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   };
 
   const renderAccountGroup = (title: string, type: AccountType) => {
-    const group = groupAccounts(type);
+    let group = groupAccounts(type);
     
-    // Don't show empty groups unless in edit mode, but if in edit mode, show even if empty so we see structure
+    // Filter hidden accounts if not in edit mode
+    if (!isEditMode) {
+        group = group.filter(a => !a.isHidden);
+    }
+    
+    // Don't show empty groups unless in edit mode
     if (group.length === 0 && !isEditMode) return null;
 
     const totalInUAH = getGroupTotalInUAH(type);
@@ -121,7 +136,10 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
         
         <div className="grid grid-cols-1 gap-3">
           {group.map((account, index) => {
-            const balance = getBalance(account);
+            const rawBalance = getBalance(account);
+            // Fix for -0 display. If abs(balance) is very small, treat as 0.
+            const balance = Math.abs(rawBalance) < 0.005 ? 0 : rawBalance;
+
             // Use global rate for display calculation
             const currentRate = rates[account.currency] || 1;
             const balanceInUAH = account.currency !== Currency.UAH 
@@ -129,8 +147,10 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 : null;
             
             // Generate a subtle background color and border color
-            const bgColor = account.color + '10'; // 6% opacity roughly
-            const borderColor = account.color;
+            // If hidden in edit mode, make it look "inactive" (grayscale or faded)
+            const isHidden = !!account.isHidden;
+            const bgColor = isHidden ? '#f3f4f6' : (account.color + '10'); // Gray if hidden, Color if visible
+            const borderColor = isHidden ? '#9ca3af' : account.color;
 
             return (
               <div 
@@ -138,7 +158,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 onClick={() => {
                     if (!isEditMode) onSelectAccount(account.id);
                 }}
-                className={`rounded-xl shadow-sm border border-gray-100 relative overflow-hidden group transition-all ${!isEditMode ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''}`}
+                className={`rounded-xl shadow-sm border border-gray-100 relative overflow-hidden group transition-all ${!isEditMode ? 'cursor-pointer hover:shadow-md active:scale-[0.99]' : ''} ${isHidden ? 'opacity-75' : ''}`}
                 style={{ 
                     background: `linear-gradient(110deg, white 40%, ${bgColor} 100%)`,
                     borderLeft: `5px solid ${borderColor}`
@@ -148,13 +168,15 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                    {/* Left Side: Icon & Name */}
                    <div className="flex items-center gap-3 overflow-hidden">
                       <div 
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm"
-                        style={{ backgroundColor: account.color }}
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${isHidden ? 'bg-gray-400' : ''}`}
+                        style={{ backgroundColor: isHidden ? undefined : account.color }}
                       >
                           <CategoryIcon iconName={account.icon || 'wallet'} size={20} />
                       </div>
                       <div className="min-w-0">
-                          <h3 className="font-bold text-gray-800 text-base truncate pr-2">{account.name}</h3>
+                          <h3 className={`font-bold text-base truncate pr-2 ${isHidden ? 'text-gray-500' : 'text-gray-800'}`}>
+                              {account.name} {isHidden && <span className='text-xs font-normal text-gray-400'>(Приховано)</span>}
+                          </h3>
                           {balanceInUAH !== null && (
                             <div className="text-xs font-medium text-gray-400 mt-0.5">
                                 {balanceInUAH.toLocaleString('uk-UA', { maximumFractionDigits: 0 })} UAH
@@ -167,6 +189,16 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                    <div className="flex items-center gap-3 text-right shrink-0">
                         {isEditMode ? (
                            <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm p-1 rounded-full border border-gray-200 shadow-sm">
+                               {/* Visibility Toggle */}
+                               <button 
+                                    onClick={(e) => { e.stopPropagation(); onToggleVisibility(account); }}
+                                    className="w-8 h-8 flex items-center justify-center rounded-full transition-all hover:bg-white"
+                               >
+                                   {account.isHidden ? <EyeOff size={16} className="text-gray-400" /> : <Eye size={16} className="text-black" />}
+                               </button>
+
+                               <div className="w-px h-4 bg-gray-300 mx-1"></div>
+
                                {/* Reorder Controls */}
                                <button 
                                     onClick={(e) => { e.stopPropagation(); moveAccount(index, 'up', type); }}
