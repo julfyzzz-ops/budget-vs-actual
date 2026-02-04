@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, Copy, Share2, Upload, FileJson, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { AppData, Currency } from '../types';
-import { getExportDataString, getExportFileName, triggerBrowserDownload, shareAsText, importDataFromString } from '../services/storageService';
+import { getExportDataString, getExportFileName, triggerBrowserDownload, shareData, importDataFromString } from '../services/storageService';
 import { Button } from './ui/Button';
 
 interface DataManagementModalProps {
@@ -48,18 +48,24 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
     });
   };
 
-  const handleDownload = () => {
-      try {
-        triggerBrowserDownload(exportString, fileName);
-      } catch (e) {
-        alert('Помилка завантаження. Спробуйте скопіювати текст вручну.');
+  const handleDownload = async () => {
+      // On Android/Mobile, "Downloading" inside a WebView often fails.
+      // We try to use the Native Share API (File) first, as it allows "Save to Files".
+      const shared = await shareData(exportString, fileName);
+      
+      // If Native Share didn't work (e.g. Desktop, or cancelled), try standard browser download
+      if (!shared) {
+          try {
+            triggerBrowserDownload(exportString, fileName);
+          } catch (e) {
+            alert('Помилка завантаження. Спробуйте скопіювати текст вручну.');
+          }
       }
   };
 
   const handleShare = async () => {
-      try {
-          await shareAsText(exportString);
-      } catch (e) {
+      const success = await shareData(exportString, fileName);
+      if (!success) {
           alert('Поділитися не вдалося. Скопіюйте текст вручну.');
       }
   };
@@ -172,13 +178,13 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
             {activeTab === 'export' && (
                 <div className="space-y-4">
                     <p className="text-sm text-gray-500">
-                        Збережіть цей файл або текст для резервного копіювання даних.
+                        Збережіть файл для резервного копіювання. На Android використовуйте кнопку "Поділитися" або "Зберегти файл" для збереження в пам'ять телефону.
                     </p>
 
                     {/* Action Buttons */}
                     <div className="grid grid-cols-2 gap-3">
                         <Button variant="secondary" onClick={handleDownload} className="text-sm">
-                            <Download size={16} /> Скачати файл
+                            <Download size={16} /> Зберегти файл
                         </Button>
                         <Button variant="secondary" onClick={handleShare} className="text-sm">
                             <Share2 size={16} /> Поділитися

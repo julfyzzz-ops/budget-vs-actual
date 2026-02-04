@@ -48,16 +48,41 @@ export const triggerBrowserDownload = (jsonString: string, fileName: string) => 
     URL.revokeObjectURL(url);
 };
 
-// Attempt to share as text (not file) which is more compatible on Android
-export const shareAsText = async (jsonString: string) => {
-    if (navigator.share) {
-        await navigator.share({
-            title: 'Бюджет JSON',
-            text: jsonString
-        });
-    } else {
-        throw new Error("Sharing not supported");
+// Robust share function that tries to share as a File first (Android "Save to..."), then as text
+export const shareData = async (jsonString: string, fileName: string): Promise<boolean> => {
+    // 1. Try to share as a physical file (Best for Android "Save to Files" or Messengers)
+    if (navigator.canShare && navigator.share) {
+        try {
+            const file = new File([jsonString], fileName, { type: "application/json" });
+            const shareData = {
+                files: [file],
+                title: 'Резервна копія бюджету',
+                text: 'Файл даних додатку'
+            };
+
+            if (navigator.canShare(shareData)) {
+                await navigator.share(shareData);
+                return true;
+            }
+        } catch (e) {
+            console.warn("File sharing failed, falling back to text", e);
+        }
     }
+
+    // 2. Fallback: Share as plain text
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: 'Резервна копія (JSON)',
+                text: jsonString
+            });
+            return true;
+        } catch (e) {
+            console.warn("Text sharing failed", e);
+        }
+    }
+
+    return false;
 };
 
 export const importDataFromFile = (file: File): Promise<AppData> => {

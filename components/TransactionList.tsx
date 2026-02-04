@@ -317,7 +317,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
         </div>
 
       {/* Lock Button - Fixed Bottom Left */}
-      <div className="fixed bottom-20 left-4 z-30">
+      <div className="fixed bottom-28 left-4 z-30">
         <button
           onClick={() => setIsEditMode(!isEditMode)}
           className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all ${isEditMode ? 'bg-orange-500 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
