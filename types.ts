@@ -2,7 +2,7 @@
 export enum TransactionType {
   INCOME = 'INCOME',
   EXPENSE = 'EXPENSE',
-  TRANSFER = 'TRANSFER' // Optional extension
+  TRANSFER = 'TRANSFER'
 }
 
 export enum Currency {
@@ -17,16 +17,21 @@ export enum AccountType {
   SAVINGS = 'SAVINGS'
 }
 
+export interface UserSettings {
+  numberFormat: 'integer' | 'decimal';
+  theme: 'light' | 'dark';
+}
+
 export interface Account {
   id: string;
   name: string;
   currency: Currency;
   initialBalance: number;
   color: string;
-  icon: string; // Icon name from CategoryIcon map
+  icon: string;
   type: AccountType;
-  currentRate: number; // Legacy, but kept for compatibility. UI now prefers AppData.rates
-  isHidden?: boolean; // New property for visibility toggle
+  currentRate: number;
+  isHidden?: boolean;
 }
 
 export interface Category {
@@ -35,20 +40,20 @@ export interface Category {
   type: TransactionType;
   icon: string;
   color: string;
-  monthlyBudget: number; // Deprecated: used as fallback, logic moved to budgetHistory
-  budgetHistory?: Record<string, number>; // Key: "YYYY-MM", Value: Budget Amount
+  monthlyBudget: number;
+  budgetHistory?: Record<string, number>;
 }
 
 export interface Transaction {
   id: string;
-  date: string; // ISO string
+  date: string;
   amount: number;
   currency: Currency;
-  exchangeRate: number; // Rate relative to base currency (UAH). 1 for UAH.
+  exchangeRate: number;
   accountId: string;
-  toAccountId?: string; // Target account for transfers
-  toAmount?: number; // Exact amount received in target account (for transfers)
-  categoryId: string; // Optional for Transfer, strictly
+  toAccountId?: string;
+  toAmount?: number;
+  categoryId: string;
   note?: string;
   type: TransactionType;
 }
@@ -57,7 +62,8 @@ export interface AppData {
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
-  rates: Record<string, number>; // Global exchange rates (e.g., "USD": 41.5)
+  rates: Record<string, number>;
+  settings: UserSettings;
 }
 
 export const BASE_CURRENCY = Currency.UAH;

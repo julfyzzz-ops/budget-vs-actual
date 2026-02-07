@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, List, Wallet, Plus, Settings, Calculator } from 'lucide-react';
-import { AppData, Transaction, Account, Category } from './types';
+import { AppData, Transaction, Account, Category, UserSettings } from './types';
 import { INITIAL_DATA } from './constants';
 import { loadFromStorage, saveToStorage } from './services/storageService';
 import { OverviewTab } from './components/OverviewTab';
@@ -13,14 +13,12 @@ import { AccountModal } from './components/AccountModal';
 import { CategoryModal } from './components/CategoryModal';
 import { DataManagementModal } from './components/DataManagementModal';
 
-// Simple UUID generator fallback since we can't install packages freely
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'accounts' | 'budget'>('overview');
   const [data, setData] = useState<AppData>(INITIAL_DATA);
   
-  // Navigation & Filtering State
   const [transactionFilters, setTransactionFilters] = useState<TransactionFilters | null>(null);
 
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
@@ -30,19 +28,15 @@ export default function App() {
   
   const [editingAccount, setEditingAccount] = useState<Account | undefined>(undefined);
   const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined);
-  const [editingCategoryDate, setEditingCategoryDate] = useState<Date>(new Date()); // Context for budget editing
+  const [editingCategoryDate, setEditingCategoryDate] = useState<Date>(new Date());
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
   
-  // Load data on mount
   useEffect(() => {
     const loaded = loadFromStorage();
     
-    // Migration: ensure rates exist
-    if (!loaded.rates) {
-        loaded.rates = INITIAL_DATA.rates;
-    }
+    if (!loaded.rates) loaded.rates = INITIAL_DATA.rates;
+    if (!loaded.settings) loaded.settings = INITIAL_DATA.settings;
 
-    // Migration: ensure accounts have types and icons
     if (loaded.accounts) {
        loaded.accounts = loaded.accounts.map(a => {
            let updated = { ...a };
@@ -60,17 +54,12 @@ export default function App() {
        });
     }
 
-    // Migration for categories (budgetHistory)
     if(loaded.categories) {
         loaded.categories = loaded.categories.map(c => {
             const updated = { ...c };
-            // Ensure budgetHistory exists. If not, migrate monthlyBudget to a history entry in the past.
             if (!updated.budgetHistory) {
-                updated.budgetHistory = {
-                    '2023-01': c.monthlyBudget || 0
-                };
+                updated.budgetHistory = { '2023-01': c.monthlyBudget || 0 };
             }
-            // Ensure monthlyBudget is still there for types compatibility, though we prioritize history
             if (updated.monthlyBudget === undefined) updated.monthlyBudget = 0;
             return updated;
         });
@@ -79,24 +68,27 @@ export default function App() {
     setData(loaded);
   }, []);
 
-  // Auto-save on change
   useEffect(() => {
     saveToStorage(data);
   }, [data]);
 
+  // Sync theme with document class
+  useEffect(() => {
+    if (data.settings.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [data.settings.theme]);
+
   const saveTransaction = (t: Transaction | Omit<Transaction, 'id'>) => {
     if ('id' in t) {
-        // Edit existing
         setData(prev => ({
             ...prev,
             transactions: prev.transactions.map(tr => tr.id === t.id ? t as Transaction : tr)
         }));
     } else {
-        // Create new
-        const newTransaction: Transaction = {
-          ...t,
-          id: generateId()
-        };
+        const newTransaction: Transaction = { ...t, id: generateId() };
         setData(prev => ({
           ...prev,
           transactions: [...prev.transactions, newTransaction]
@@ -116,20 +108,14 @@ export default function App() {
     }));
   };
 
-  // --- Account Handlers ---
   const saveAccount = (accountData: Omit<Account, 'id'> | Account) => {
     if ('id' in accountData) {
-        // Edit existing
         setData(prev => ({
             ...prev,
             accounts: prev.accounts.map(a => a.id === accountData.id ? accountData as Account : a)
         }));
     } else {
-        // Create new
-        const newAccount: Account = {
-            ...accountData,
-            id: generateId()
-        };
+        const newAccount: Account = { ...accountData, id: generateId() };
         setData(prev => ({
             ...prev,
             accounts: [...prev.accounts, newAccount]
@@ -138,10 +124,7 @@ export default function App() {
   };
 
   const reorderAccounts = (newAccounts: Account[]) => {
-      setData(prev => ({
-          ...prev,
-          accounts: newAccounts
-      }));
+      setData(prev => ({ ...prev, accounts: newAccounts }));
   };
 
   const toggleAccountVisibility = (account: Account) => {
@@ -167,11 +150,8 @@ export default function App() {
     setIsAccountModalOpen(true);
   };
 
-  // --- Category Handlers ---
   const saveCategory = (catData: Omit<Category, 'id'> | Category) => {
-    // Determine the month key for the current editing context
-    const monthKey = editingCategoryDate.toISOString().slice(0, 7); // "YYYY-MM"
-
+    const monthKey = editingCategoryDate.toISOString().slice(0, 7);
     if ('id' in catData) {
         setData(prev => ({
             ...prev,
@@ -179,40 +159,22 @@ export default function App() {
                 if (c.id === catData.id) {
                     const newBudget = catData.monthlyBudget;
                     const oldHistory = c.budgetHistory || {};
-                    
-                    // Logic: Update history for this month. 
-                    // To "Apply to subsequent months", we delete any future explicit overrides.
-                    // This way, future months will fall back to finding *this* new entry as the most recent one.
                     const newHistory = { ...oldHistory };
-                    
-                    // 1. Set current month
                     newHistory[monthKey] = newBudget;
-
-                    // 2. Delete all future keys
                     Object.keys(newHistory).forEach(key => {
-                        if (key > monthKey) {
-                            delete newHistory[key];
-                        }
+                        if (key > monthKey) delete newHistory[key];
                     });
-
-                    return {
-                        ...catData,
-                        budgetHistory: newHistory
-                    } as Category;
+                    return { ...catData, budgetHistory: newHistory } as Category;
                 }
                 return c;
             })
         }));
     } else {
-        // New Category
         const newCat: Category = {
             ...catData,
             id: generateId(),
-            budgetHistory: {
-                [monthKey]: catData.monthlyBudget // Start history from current view month
-            }
+            budgetHistory: { [monthKey]: catData.monthlyBudget }
         } as Category;
-
         setData(prev => ({
             ...prev,
             categories: [...prev.categories, newCat]
@@ -221,10 +183,7 @@ export default function App() {
   };
 
   const reorderCategories = (newCategories: Category[]) => {
-      setData(prev => ({
-          ...prev,
-          categories: newCategories
-      }));
+      setData(prev => ({ ...prev, categories: newCategories }));
   };
 
   const deleteCategory = (id: string) => {
@@ -252,41 +211,33 @@ export default function App() {
   };
 
   const handleUpdateRates = (newRates: Record<string, number>) => {
-      setData(prev => ({
-          ...prev,
-          rates: newRates
-      }));
+      setData(prev => ({ ...prev, rates: newRates }));
   };
 
-  // --- Navigation & Filtering Handlers ---
+  const handleUpdateSettings = (newSettings: UserSettings) => {
+      setData(prev => ({ ...prev, settings: newSettings }));
+  };
+
   const handleOverviewCategoryClick = (categoryId: string, date: Date) => {
-    setTransactionFilters({
-        categoryId,
-        date,
-        accountId: ''
-    });
+    setTransactionFilters({ categoryId, date, accountId: '' });
     setActiveTab('transactions');
   };
 
   const handleAccountSelect = (accountId: string) => {
-    setTransactionFilters({
-        accountId,
-        date: new Date(), // Default to current month, user can change
-        categoryId: ''
-    });
+    setTransactionFilters({ accountId, date: new Date(), categoryId: '' });
     setActiveTab('transactions');
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 w-full overflow-hidden relative">
+    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 w-full overflow-hidden relative transition-colors duration-300">
       
-      {/* Main Content Area */}
       <main className="flex-1 overflow-hidden relative w-full pt-safe">
         {activeTab === 'overview' && (
             <OverviewTab 
                 transactions={data.transactions} 
                 categories={data.categories}
-                onCategoryClick={handleOverviewCategoryClick} 
+                onCategoryClick={handleOverviewCategoryClick}
+                settings={data.settings}
             />
         )}
         {activeTab === 'transactions' && (
@@ -297,6 +248,8 @@ export default function App() {
                 onDelete={deleteTransaction}
                 onEdit={openEditTransaction}
                 initialFilters={transactionFilters}
+                onResetFilters={() => setTransactionFilters(null)}
+                settings={data.settings}
             />
         )}
         {activeTab === 'accounts' && (
@@ -310,6 +263,7 @@ export default function App() {
                 onSelectAccount={handleAccountSelect}
                 onReorderAccounts={reorderAccounts}
                 onToggleVisibility={toggleAccountVisibility}
+                settings={data.settings}
             />
         )}
         {activeTab === 'budget' && (
@@ -319,63 +273,61 @@ export default function App() {
                 onEditCategory={openEditCategory}
                 onDeleteCategory={deleteCategory}
                 onReorderCategories={reorderCategories}
+                settings={data.settings}
             />
         )}
       </main>
 
-      {/* FAB - Add Button */}
       <div className="absolute bottom-28 right-4 z-30">
           <button 
             onClick={() => {
                 setEditingTransaction(undefined);
                 setIsTransactionModalOpen(true);
             }}
-            className="w-14 h-14 bg-primary rounded-full shadow-lg shadow-emerald-300 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
+            className="w-14 h-14 bg-primary rounded-full shadow-lg shadow-emerald-300 dark:shadow-emerald-900/40 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
           >
               <Plus size={32} />
           </button>
       </div>
 
-      {/* Bottom Navigation */}
-      <nav className="bg-white border-t border-gray-200 pb-safe pt-2 px-2 flex justify-between items-center z-20 pb-4">
+      <nav className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 pb-safe pt-2 px-2 flex justify-between items-center z-20 pb-4 transition-colors">
         <button 
             onClick={() => setActiveTab('overview')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <LayoutDashboard size={22} strokeWidth={activeTab === 'overview' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Огляд</span>
         </button>
         <button 
             onClick={() => setActiveTab('transactions')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <List size={22} strokeWidth={activeTab === 'transactions' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Транз.</span>
         </button>
         <button 
             onClick={() => setActiveTab('budget')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <Calculator size={22} strokeWidth={activeTab === 'budget' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Бюджет</span>
         </button>
         <button 
             onClick={() => setActiveTab('accounts')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <Wallet size={22} strokeWidth={activeTab === 'accounts' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Рахунки</span>
         </button>
         <button 
             onClick={() => setIsDataModalOpen(true)}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] text-gray-400 hover:text-gray-600`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300`}
         >
             <Settings size={22} />
             <span className="text-[10px] font-medium">Налашт.</span>
         </button>
       </nav>
 
-      {/* Modals */}
       <AddTransactionModal 
         isOpen={isTransactionModalOpen} 
         onClose={() => setIsTransactionModalOpen(false)} 
@@ -398,7 +350,7 @@ export default function App() {
         onClose={() => setIsCategoryModalOpen(false)}
         onSave={saveCategory}
         initialData={editingCategory}
-        targetDate={editingCategoryDate} // Pass date context
+        targetDate={editingCategoryDate}
       />
 
       <DataManagementModal
@@ -407,6 +359,7 @@ export default function App() {
         currentData={data}
         onImport={handleDataImport}
         onUpdateRates={handleUpdateRates}
+        onUpdateSettings={handleUpdateSettings}
       />
     </div>
   );

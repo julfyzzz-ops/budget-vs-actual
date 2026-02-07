@@ -27,5 +27,9 @@ export const INITIAL_DATA: AppData = {
       [Currency.USD]: 41.5,
       [Currency.EUR]: 44.0,
       [Currency.UAH]: 1,
+  },
+  settings: {
+    numberFormat: 'decimal',
+    theme: 'light'
   }
 };

@@ -24,7 +24,6 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
 
   const monthLabel = targetDate.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' });
 
-  // Helper to resolve budget from history
   const getBudgetForDate = (category: Category, date: Date): number => {
     if (!category.budgetHistory) return category.monthlyBudget || 0;
     const keys = Object.keys(category.budgetHistory).sort().reverse();
@@ -37,11 +36,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
     if (initialData) {
       setName(initialData.name);
       setType(initialData.type);
-      
-      // Load budget specifically for the target date
-      const budgetForMonth = getBudgetForDate(initialData, targetDate);
-      setMonthlyBudget(budgetForMonth.toString());
-      
+      setMonthlyBudget(getBudgetForDate(initialData, targetDate).toString());
       setColor(initialData.color);
       setIcon(ICON_MAP[initialData.icon] ? initialData.icon : 'shopping-cart');
     } else {
@@ -59,115 +54,56 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, o
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const categoryData = {
-      name,
-      type,
-      icon, 
-      color,
-      monthlyBudget: parseFloat(monthlyBudget) || 0
-    };
-
-    if (initialData) {
-      onSave({ ...categoryData, id: initialData.id });
-    } else {
-      onSave(categoryData);
-    }
+    const categoryData = { name, type, icon, color, monthlyBudget: parseFloat(monthlyBudget) || 0 };
+    onSave(initialData ? { ...categoryData, id: initialData.id } : categoryData);
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
+      <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh] transition-colors">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800">{initialData ? 'Редагувати категорію' : 'Нова категорія'}</h2>
-          <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
-            <X size={20} />
-          </button>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{initialData ? 'Редагувати' : 'Нова категорія'}</h2>
+          <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"><X size={20} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          
-          <div className="flex p-1 bg-gray-100 rounded-lg mb-4">
-                <button 
-                    type="button"
-                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${type === TransactionType.EXPENSE ? 'bg-white shadow text-red-500' : 'text-gray-500 hover:text-gray-700'}`}
-                    onClick={() => setType(TransactionType.EXPENSE)}
-                >
-                    Витрати
-                </button>
-                <button 
-                    type="button"
-                    className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${type === TransactionType.INCOME ? 'bg-white shadow text-emerald-500' : 'text-gray-500 hover:text-gray-700'}`}
-                    onClick={() => setType(TransactionType.INCOME)}
-                >
-                    Доходи
-                </button>
+          <div className="flex p-1 bg-gray-100 dark:bg-gray-900 rounded-lg mb-4">
+                <button type="button" onClick={() => setType(TransactionType.EXPENSE)} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${type === TransactionType.EXPENSE ? 'bg-white dark:bg-gray-800 shadow text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>Витрати</button>
+                <button type="button" onClick={() => setType(TransactionType.INCOME)} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${type === TransactionType.INCOME ? 'bg-white dark:bg-gray-800 shadow text-emerald-500' : 'text-gray-500 dark:text-gray-400'}`}>Доходи</button>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Назва</label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary"
-              placeholder="Назва статті"
-            />
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Назва</label>
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder="Назва статті" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">
-                {type === TransactionType.EXPENSE ? `Місячний ліміт на ${monthLabel}` : `Очікуваний дохід на ${monthLabel}`}
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={monthlyBudget}
-              onChange={(e) => setMonthlyBudget(e.target.value)}
-              className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary"
-            />
-            <p className="text-[10px] text-gray-400 mt-1">
-                Зміни будуть застосовані до цього місяця та всіх наступних.
-            </p>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Бюджет на {monthLabel}</label>
+            <input type="number" step="0.01" value={monthlyBudget} onChange={(e) => setMonthlyBudget(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary" />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Колір мітки</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Колір</label>
             <div className="flex flex-wrap gap-2">
               {COLORS.map(c => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${color === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`}
-                  style={{ backgroundColor: c }}
-                />
+                <button key={c} type="button" onClick={() => setColor(c)} className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${color === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`} style={{ backgroundColor: c }} />
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Іконка</label>
-            <div className="grid grid-cols-6 gap-2">
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Іконка</label>
+            <div className="grid grid-cols-6 gap-2 max-h-40 overflow-y-auto no-scrollbar">
               {Object.keys(ICON_MAP).filter(k => k !== 'transfer').map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setIcon(key)}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${icon === key ? 'bg-emerald-50 text-primary ring-2 ring-primary' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
-                >
-                  <CategoryIcon iconName={key} size={20} />
-                </button>
+                <button key={key} type="button" onClick={() => setIcon(key)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${icon === key ? 'bg-emerald-50 dark:bg-emerald-900/20 text-primary ring-2 ring-primary' : 'bg-gray-50 dark:bg-gray-900 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}><CategoryIcon iconName={key} size={20} /></button>
               ))}
             </div>
           </div>
 
-          <Button type="submit" fullWidth className="py-3 mt-4">
-            Зберегти
-          </Button>
+          <Button type="submit" fullWidth className="py-3 mt-4">Зберегти</Button>
         </form>
       </div>
     </div>
