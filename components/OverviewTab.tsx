@@ -156,22 +156,28 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
   };
 
   return (
-    <div className="pb-32 pt-2 px-4 h-full overflow-y-auto no-scrollbar bg-gray-50 dark:bg-gray-900 transition-colors">
-      <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm mb-2 border border-gray-100 dark:border-gray-700 transition-colors">
-        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronLeft size={24} /></button>
-        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 capitalize">{periodLabel}</h2>
-        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronRight size={24} /></button>
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors relative">
+      {/* Fixed Header Section */}
+      <div className="flex-none px-4 pt-2 pb-2 bg-gray-50 dark:bg-gray-900 z-30 relative">
+        <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+            <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronLeft size={24} /></button>
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 capitalize">{periodLabel}</h2>
+            <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronRight size={24} /></button>
+        </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-4 text-center transition-colors">
-          <div className={`text-4xl font-black tracking-tight ${balance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
-             {balance > 0 ? '+' : ''}{formatValue(balance)}
-             <span className="text-lg text-gray-400 dark:text-gray-500 font-medium ml-2">UAH</span>
-          </div>
-      </div>
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-32 pt-0">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-4 text-center transition-colors">
+            <div className={`text-4xl font-black tracking-tight ${balance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
+                {balance > 0 ? '+' : ''}{formatValue(balance)}
+                <span className="text-lg text-gray-400 dark:text-gray-500 font-medium ml-2">UAH</span>
+            </div>
+        </div>
 
-      {renderCategoryList('Витрати', stats.expenseData, stats.expense, stats.totalBudgetExpense, TrendingDown, 'bg-red-500')}
-      {renderCategoryList('Доходи', stats.incomeData, stats.income, stats.totalBudgetIncome, TrendingUp, 'bg-emerald-500')}
+        {renderCategoryList('Витрати', stats.expenseData, stats.expense, stats.totalBudgetExpense, TrendingDown, 'bg-red-500')}
+        {renderCategoryList('Доходи', stats.incomeData, stats.income, stats.totalBudgetIncome, TrendingUp, 'bg-emerald-500')}
+      </div>
     </div>
   );
 };

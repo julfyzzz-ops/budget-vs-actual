@@ -263,6 +263,7 @@ export default function App() {
                 onSelectAccount={handleAccountSelect}
                 onReorderAccounts={reorderAccounts}
                 onToggleVisibility={toggleAccountVisibility}
+                onOpenSettings={() => setIsDataModalOpen(true)}
                 settings={data.settings}
             />
         )}
@@ -293,38 +294,31 @@ export default function App() {
       <nav className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 pb-safe pt-2 px-2 flex justify-between items-center z-20 pb-4 transition-colors">
         <button 
             onClick={() => setActiveTab('overview')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <LayoutDashboard size={22} strokeWidth={activeTab === 'overview' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Огляд</span>
         </button>
         <button 
             onClick={() => setActiveTab('transactions')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <List size={22} strokeWidth={activeTab === 'transactions' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Транз.</span>
         </button>
         <button 
             onClick={() => setActiveTab('budget')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <Calculator size={22} strokeWidth={activeTab === 'budget' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Бюджет</span>
         </button>
         <button 
             onClick={() => setActiveTab('accounts')}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <Wallet size={22} strokeWidth={activeTab === 'accounts' ? 2.5 : 2} />
             <span className="text-[10px] font-medium">Рахунки</span>
-        </button>
-        <button 
-            onClick={() => setIsDataModalOpen(true)}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors min-w-[60px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300`}
-        >
-            <Settings size={22} />
-            <span className="text-[10px] font-medium">Налашт.</span>
         </button>
       </nav>
 

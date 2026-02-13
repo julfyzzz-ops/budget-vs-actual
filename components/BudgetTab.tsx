@@ -39,6 +39,16 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
     return effectiveKey ? category.budgetHistory[effectiveKey] : 0;
   };
 
+  const { projectedBalance } = useMemo(() => {
+    const income = categories
+        .filter(c => c.type === TransactionType.INCOME)
+        .reduce((sum, c) => sum + getBudgetForDate(c, currentDate), 0);
+    const expense = categories
+        .filter(c => c.type === TransactionType.EXPENSE)
+        .reduce((sum, c) => sum + getBudgetForDate(c, currentDate), 0);
+    return { projectedBalance: income - expense };
+  }, [categories, currentDate]);
+
   const moveCategory = (index: number, direction: 'up' | 'down', groupType: TransactionType) => {
     const income = categories.filter(c => c.type === TransactionType.INCOME);
     const expense = categories.filter(c => c.type === TransactionType.EXPENSE);
@@ -100,19 +110,53 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
   };
 
   return (
-    <div className="pb-32 pt-2 px-4 h-full overflow-y-auto no-scrollbar bg-gray-50 dark:bg-gray-900 transition-colors">
-       <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 mb-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
-        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronLeft size={24} /></button>
-        <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 capitalize">{periodLabel}</h2>
-        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronRight size={24} /></button>
-      </div>
-       <div className="flex items-center justify-between mb-4 px-1">
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Бюджет</h2>
-          <button onClick={() => setIsEditMode(!isEditMode)} className={`p-2 rounded-full transition-all ${isEditMode ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400' : 'text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>{isEditMode ? <LockOpen size={20} /> : <Lock size={20} />}</button>
-      </div>
-       {renderCategoryGroup(TransactionType.INCOME, 'Доходи', TrendingUp, 'bg-emerald-500')}
-       {renderCategoryGroup(TransactionType.EXPENSE, 'Витрати', TrendingDown, 'bg-red-500')}
-       {isEditMode && (<button onClick={() => onAddCategory(currentDate)} className="w-full py-4 mt-2 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl flex items-center justify-center text-gray-500 dark:text-gray-400 transition-colors bg-white/50 dark:bg-gray-800/50 text-lg font-medium"><Plus size={24} className="mr-2" /> Додати статтю</button>)}
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors relative">
+        {/* Fixed Header Section (Month Selector) */}
+        <div className="flex-none px-4 pt-2 pb-2 bg-gray-50 dark:bg-gray-900 z-30 relative">
+            <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+                <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronLeft size={24} /></button>
+                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 capitalize">{periodLabel}</h2>
+                <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronRight size={24} /></button>
+            </div>
+        </div>
+
+        {/* Floating Controls */}
+        <div className="absolute top-20 left-4 right-4 z-20 flex items-start justify-end pointer-events-none">
+             <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+                 {isEditMode && (
+                     <button 
+                        onClick={() => onAddCategory(currentDate)}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl shadow-lg backdrop-blur-md transition-all border bg-primary/90 text-white border-primary/20 animate-fade-in"
+                     >
+                        <Plus size={18} />
+                     </button>
+                 )}
+                 <button 
+                    onClick={() => setIsEditMode(!isEditMode)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl shadow-lg backdrop-blur-md transition-all border ${
+                        isEditMode
+                        ? 'bg-orange-100/90 text-orange-600 border-orange-200' 
+                        : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 border-white/20 dark:border-gray-700/50'
+                    }`}
+                 >
+                    {isEditMode ? <LockOpen size={18} /> : <Lock size={18} />}
+                 </button>
+             </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-32 pt-0">
+           {/* Projected Balance Card */}
+           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 mb-4 text-center transition-colors animate-fade-in">
+               <div className={`text-4xl font-black tracking-tight ${projectedBalance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-500 dark:text-red-400'}`}>
+                  {projectedBalance > 0 ? '+' : ''}{formatValue(projectedBalance)}
+                  <span className="text-lg text-gray-400 dark:text-gray-500 font-medium ml-2">UAH</span>
+               </div>
+           </div>
+
+           {renderCategoryGroup(TransactionType.EXPENSE, 'Витрати', TrendingDown, 'bg-red-500')}
+           {renderCategoryGroup(TransactionType.INCOME, 'Доходи', TrendingUp, 'bg-emerald-500')}
+        </div>
     </div>
   );
 };
