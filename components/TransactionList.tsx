@@ -25,6 +25,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   transactions, accounts, categories, onDelete, onEdit, initialFilters, onResetFilters, settings
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterMonth, setFilterMonth] = useState<Date>(new Date());
   const [filterAccountId, setFilterAccountId] = useState<string>('');
   const [filterCategoryId, setFilterCategoryId] = useState<string>('');
@@ -34,16 +35,18 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       if (initialFilters.date) setFilterMonth(initialFilters.date);
       if (initialFilters.accountId !== undefined) setFilterAccountId(initialFilters.accountId);
       if (initialFilters.categoryId !== undefined) setFilterCategoryId(initialFilters.categoryId);
+      if (initialFilters.accountId || initialFilters.categoryId) setIsFilterOpen(true);
       if (onResetFilters) onResetFilters();
     }
   }, [initialFilters, onResetFilters]);
 
   const resetFilters = () => {
-    setFilterMonth(new Date());
     setFilterAccountId('');
     setFilterCategoryId('');
     if (onResetFilters) onResetFilters();
   };
+
+  const hasActiveFilters = filterAccountId !== '' || filterCategoryId !== '';
 
   const prevMonth = () => setFilterMonth(new Date(filterMonth.getFullYear(), filterMonth.getMonth() - 1, 1));
   const nextMonth = () => setFilterMonth(new Date(filterMonth.getFullYear(), filterMonth.getMonth() + 1, 1));
@@ -88,48 +91,81 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     return date.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
   };
 
-  const monthLabel = filterMonth.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' });
+  const monthLabel = filterMonth.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
 
   return (
-    <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors">
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 shadow-sm z-20 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-                 <button onClick={prevMonth} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"><ChevronLeft size={20} /></button>
-                 <span className="font-bold text-gray-800 dark:text-gray-100 capitalize">{monthLabel}</span>
-                 <button onClick={nextMonth} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"><ChevronRight size={20} /></button>
-            </div>
-            <div className="flex gap-2">
-                <div className="relative flex-1">
-                    <select value={filterAccountId} onChange={(e) => setFilterAccountId(e.target.value)}
-                        className={`w-full p-2 pl-2 pr-6 text-xs rounded-lg border appearance-none focus:ring-2 focus:ring-primary focus:outline-none ${filterAccountId ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-medium' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}
-                    >
-                        <option value="">Всі рахунки</option>
-                        {accounts.map(a => (<option key={a.id} value={a.id}>{a.name}</option>))}
-                    </select>
-                </div>
-                <div className="relative flex-1">
-                    <select value={filterCategoryId} onChange={(e) => setFilterCategoryId(e.target.value)}
-                         className={`w-full p-2 pl-2 pr-6 text-xs rounded-lg border appearance-none focus:ring-2 focus:ring-primary focus:outline-none ${filterCategoryId ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-medium' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'}`}
-                    >
-                        <option value="">Всі категорії</option>
-                        {categories.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                    </select>
-                </div>
-                {(filterAccountId || filterCategoryId) && (
-                    <button onClick={resetFilters} className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"><X size={16} /></button>
-                )}
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors relative">
+        {/* Fixed Header Section */}
+        <div className="flex-none px-4 pt-2 pb-2 bg-gray-50 dark:bg-gray-900 z-30 relative">
+            {/* Month Selector (Budget Style) */}
+            <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+                <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronLeft size={24} /></button>
+                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 capitalize">{monthLabel}</h2>
+                <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors"><ChevronRight size={24} /></button>
             </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar pb-32 px-4 pt-2">
+        {/* Floating Controls */}
+        <div className="absolute top-20 left-4 right-4 z-20 flex items-start justify-end pointer-events-none">
+             {isFilterOpen && (
+                 <div className="pointer-events-auto flex-1 mr-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl p-1.5 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 animate-fade-in flex items-center gap-2 min-w-0">
+                    <div className="relative flex-1 min-w-0">
+                        <select value={filterAccountId} onChange={(e) => setFilterAccountId(e.target.value)}
+                            className="w-full p-2 pl-2 text-xs rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-1 focus:ring-primary outline-none truncate"
+                        >
+                            <option value="">Всі рахунки</option>
+                            {accounts.map(a => (<option key={a.id} value={a.id}>{a.name}</option>))}
+                        </select>
+                    </div>
+                    <div className="relative flex-1 min-w-0">
+                        <select value={filterCategoryId} onChange={(e) => setFilterCategoryId(e.target.value)}
+                            className="w-full p-2 pl-2 text-xs rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-1 focus:ring-primary outline-none truncate"
+                        >
+                            <option value="">Всі категорії</option>
+                            {categories.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                        </select>
+                    </div>
+                    {hasActiveFilters && (
+                        <button onClick={resetFilters} className="w-8 h-8 flex items-center justify-center text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors shrink-0">
+                            <X size={16} />
+                        </button>
+                    )}
+                 </div>
+             )}
+
+             <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+                 <button 
+                    onClick={() => setIsFilterOpen(!isFilterOpen)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl shadow-lg backdrop-blur-md transition-all border ${
+                        isFilterOpen || hasActiveFilters
+                        ? 'bg-primary/90 text-white border-primary/20' 
+                        : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 border-white/20 dark:border-gray-700/50'
+                    }`}
+                 >
+                    <Filter size={18} />
+                 </button>
+                 <button 
+                    onClick={() => setIsEditMode(!isEditMode)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-xl shadow-lg backdrop-blur-md transition-all border ${
+                        isEditMode
+                        ? 'bg-orange-100/90 text-orange-600 border-orange-200' 
+                        : 'bg-white/80 dark:bg-gray-800/80 text-gray-500 border-white/20 dark:border-gray-700/50'
+                    }`}
+                 >
+                    {isEditMode ? <LockOpen size={18} /> : <Lock size={18} />}
+                 </button>
+             </div>
+        </div>
+
+        {/* Scrollable Transactions List */}
+        <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-32 pt-1">
             {sortedTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 dark:text-gray-600 text-center">
                     <Search size={48} className="mb-4 opacity-20" />
                     <p>Транзакцій не знайдено.</p>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    {/* Fix: Explicitly cast Object.entries(grouped) to [string, Transaction[]][] to fix "Property 'map' does not exist on type 'unknown'" */}
+                <div className="space-y-4 pt-2">
                     {(Object.entries(grouped) as [string, Transaction[]][]).map(([date, items]) => (
                         <div key={date} className="animate-fade-in">
                         <div className="flex items-center gap-2 mb-2 sticky top-0 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur py-2 z-10 transition-colors">
@@ -200,12 +236,6 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                 </div>
             )}
         </div>
-
-      <div className="fixed bottom-28 left-4 z-30">
-        <button onClick={() => setIsEditMode(!isEditMode)} className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all ${isEditMode ? 'bg-orange-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700'}`}>
-            {isEditMode ? <LockOpen size={20} /> : <Lock size={20} />}
-        </button>
-      </div>
     </div>
   );
 };
