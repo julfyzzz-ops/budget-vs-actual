@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>budget vs actual</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: '#10b981', // emerald-500
+              secondary: '#3b82f6', // blue-500
+              danger: '#ef4444', // red-500
+              background: '#f3f4f6', // gray-100
+              surface: '#ffffff',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      .no-scrollbar::-webkit-scrollbar {
+          display: none;
+      }
+      /* Hide scrollbar for IE, Edge and Firefox */
+      .no-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+      }
+      body {
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+    </style>
+    <script type="importmap">
+    {
+      "imports": {
+        "react/": "https://esm.sh/react@^19.2.4/",
+        "react": "https://esm.sh/react@^19.2.4",
+        "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+        "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+        "recharts": "https://esm.sh/recharts@^3.7.0",
+        "uuid": "https://esm.sh/uuid@^13.0.0"
+      }
+    }
+    </script>
+  </head>
+  <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-screen overflow-hidden select-none">
+    <div id="root" class="h-full w-full flex flex-col"></div>
+    <script type="module" src="./index.tsx"></script>
+  </body>
+</html>
