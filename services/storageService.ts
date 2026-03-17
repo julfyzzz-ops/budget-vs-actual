@@ -55,8 +55,9 @@ export const triggerBrowserDownload = (jsonString: string, fileName: string) => 
 };
 
 // Robust share function that tries to share as a File first (Android "Save to..."), then as text
-export const shareData = async (jsonString: string, fileName: string): Promise<boolean> => {
-    if (!navigator.share) return false;
+export const shareData = async (jsonString: string, fileName: string): Promise<{success: boolean, log: string}> => {
+    let log = `navigator.share exists: ${!!navigator.share}\n`;
+    if (!navigator.share) return { success: false, log: log + "Share API is not supported in this WebView." };
 
     let shared = false;
 
@@ -68,29 +69,36 @@ export const shareData = async (jsonString: string, fileName: string): Promise<b
             text: 'Файл даних додатку'
         };
 
+        log += `navigator.canShare exists: ${!!navigator.canShare}\n`;
         if (navigator.canShare && navigator.canShare(shareData)) {
+            log += "canShare(file) is true. Attempting file share...\n";
             await navigator.share(shareData);
             shared = true;
+            log += "File share successful.\n";
+        } else {
+            log += "canShare(file) is false or undefined.\n";
         }
     } catch (e: any) {
-        console.warn("File sharing failed, trying text", e);
-        if (e.name === 'AbortError') return true;
+        log += `File share error: ${e.name} - ${e.message}\n`;
+        if (e.name === 'AbortError') return { success: true, log: log + "User aborted.\n" };
     }
 
     if (!shared) {
         try {
+            log += "Attempting text share fallback...\n";
             await navigator.share({
                 title: 'Резервна копія (JSON)',
                 text: jsonString
             });
             shared = true;
+            log += "Text share successful.\n";
         } catch (e: any) {
-            console.warn("Text sharing failed", e);
-            if (e.name === 'AbortError') return true;
+            log += `Text share error: ${e.name} - ${e.message}\n`;
+            if (e.name === 'AbortError') return { success: true, log: log + "User aborted.\n" };
         }
     }
 
-    return shared;
+    return { success: shared, log };
 };
 
 export const importDataFromFile = (file: File): Promise<AppData> => {

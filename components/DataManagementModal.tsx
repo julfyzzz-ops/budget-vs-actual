@@ -31,6 +31,7 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
   const [eurRate, setEurRate] = useState('');
 
   const [downloadUrl, setDownloadUrl] = useState<string>('');
+  const [debugLog, setDebugLog] = useState<string>('');
 
   useEffect(() => {
       if (isOpen && currentData.rates) {
@@ -66,8 +67,20 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
   };
 
   const handleShare = async () => {
-      const success = await shareData(exportString, fileName);
-      if (!success) alert('Поділитися не вдалося.');
+      setDebugLog("Starting share process...\n");
+      try {
+          const result = await shareData(exportString, fileName);
+          setDebugLog(result.log);
+          if (!result.success) {
+              alert('Поділитися не вдалося. Дивіться лог нижче.');
+          }
+      } catch (e: any) {
+          setDebugLog(`Unexpected error: ${e.message}`);
+      }
+  };
+
+  const handleDownloadClick = () => {
+      setDebugLog("Download link clicked.\nIf nothing happens, your WebView does not support the HTML5 download attribute.\nTry using 'Поділитись' or copy the text manually.");
   };
 
   const handleManualImport = () => {
@@ -204,6 +217,7 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
                         <a 
                             href={downloadUrl}
                             download={fileName}
+                            onClick={handleDownloadClick}
                             className="flex items-center justify-center gap-2 py-2 px-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-lg font-medium transition-all active:scale-95 text-sm"
                         >
                             <Download size={16} /> Файл
@@ -214,6 +228,12 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
                         <textarea readOnly value={exportString} className="w-full h-48 p-3 text-xs font-mono bg-gray-50 dark:bg-gray-900 dark:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-xl" />
                         <button onClick={handleCopy} className={`absolute top-2 right-2 p-2 rounded-lg text-xs font-bold border ${copyStatus ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-green-200' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'}`}>{copyStatus ? <Check size={14} /> : <Copy size={14} />}</button>
                     </div>
+                    {debugLog && (
+                        <div className="mt-2 p-3 bg-gray-900 rounded-xl border border-gray-700">
+                            <h4 className="text-xs font-bold text-gray-400 mb-1 uppercase tracking-wider">Debug Log</h4>
+                            <pre className="text-[10px] text-green-400 font-mono whitespace-pre-wrap break-words">{debugLog}</pre>
+                        </div>
+                    )}
                 </div>
             )}
 
