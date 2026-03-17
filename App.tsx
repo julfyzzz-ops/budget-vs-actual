@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, List, Wallet, Plus, Settings, Calculator } from 'lucide-react';
-import { AppData, Transaction, Account, Category, UserSettings } from './types';
+import { AppData, Transaction, Account, Category, UserSettings, TransactionType } from './types';
 import { INITIAL_DATA } from './constants';
 import { loadFromStorage, saveToStorage } from './services/storageService';
 import { OverviewTab } from './components/OverviewTab';

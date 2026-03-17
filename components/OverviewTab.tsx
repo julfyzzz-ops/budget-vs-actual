@@ -89,8 +89,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
       isIncome: boolean
   ) => {
       const totalDiff = totalActual - totalBudget;
-      let totalDiffColor = 'text-gray-900 dark:text-gray-300';
-      if (totalBudget > 0) {
+      let totalDiffColor = 'text-gray-500 dark:text-gray-400';
+      if (totalBudget > 0 || totalActual > 0) {
           if (isIncome && totalDiff > 0) totalDiffColor = 'text-emerald-500';
           else if (!isIncome && totalDiff > 0) totalDiffColor = 'text-red-500';
       }
@@ -102,35 +102,29 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
                     <div className={`p-1.5 rounded-lg ${headerColorClass} bg-opacity-10`}>
                         <HeaderIcon size={18} className={headerColorClass.replace('bg-', 'text-')} />
                     </div>
-                    <div>
-                        <h3 className="font-bold text-gray-800 dark:text-gray-200 text-base">{title}</h3>
+                    <div className="flex flex-col justify-center items-start">
+                        <h3 className="font-bold text-gray-800 dark:text-gray-200 text-base leading-none mb-1">{title}</h3>
+                        <span className="text-gray-500 dark:text-gray-400 text-[11px] leading-none text-left">
+                            {formatValue(totalBudget)}
+                        </span>
                     </div>
                </div>
-               <div className="text-right whitespace-nowrap">
-                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-none">
-                        {formatValue(totalActual)} 
+               <div className="text-right whitespace-nowrap flex flex-col items-end justify-center">
+                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-none mb-1">
+                        {formatValue(totalActual)}
                     </span>
-                    {totalBudget > 0 && (
-                        <>
-                            <span className="text-gray-400 dark:text-gray-600 mx-1 text-lg font-light">/</span>
-                            <span className="text-gray-900 dark:text-gray-300 text-lg font-bold">
-                                {formatValue(totalBudget)}
-                            </span>
-                            <span className="text-gray-400 dark:text-gray-600 mx-1 text-lg font-light">/</span>
-                            <span className={`text-lg font-bold ${totalDiffColor}`}>
-                                {totalDiff > 0 ? '+' : ''}{formatValue(totalDiff)}
-                            </span>
-                        </>
-                    )}
+                    <span className={`text-[11px] font-medium leading-none ${totalDiffColor} text-right`}>
+                        {totalDiff > 0 ? '+' : ''}{formatValue(Math.abs(totalDiff))}
+                    </span>
                </div>
             </div>
 
             <div className="divide-y divide-gray-50 dark:divide-gray-700">
                 {data.map((item) => {
-                    const percent = item.budget > 0 ? (item.value / item.budget) * 100 : 0;
+                    const percent = item.budget > 0 ? (item.value / item.budget) * 100 : (item.value > 0 ? 100 : 0);
                     const diff = item.value - item.budget;
-                    let diffColor = 'text-gray-900 dark:text-gray-300';
-                    if (item.budget > 0) {
+                    let diffColor = 'text-gray-500 dark:text-gray-400';
+                    if (item.budget > 0 || item.value > 0) {
                         if (isIncome && diff > 0) diffColor = 'text-emerald-500';
                         else if (!isIncome && diff > 0) diffColor = 'text-red-500';
                     }
@@ -145,25 +139,21 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
                                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm shrink-0" style={{ backgroundColor: item.color }}>
                                    <CategoryIcon iconName={item.icon} size={20} />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <div className="font-bold text-gray-800 dark:text-gray-200 text-sm truncate pr-2">{item.name}</div>
-                                        <div className="text-right whitespace-nowrap flex items-center justify-end">
-                                            <span className="font-bold text-gray-900 dark:text-gray-100 text-sm">{formatValue(item.value)}</span>
-                                            {item.budget > 0 && (
-                                                <>
-                                                    <span className="text-gray-400 dark:text-gray-600 mx-1 text-sm font-light">/</span>
-                                                    <span className="text-gray-900 dark:text-gray-300 font-bold text-sm">{formatValue(item.budget)}</span>
-                                                    <span className="text-gray-400 dark:text-gray-600 mx-1 text-sm font-light">/</span>
-                                                    <span className={`font-bold text-sm ${diffColor}`}>
-                                                        {diff > 0 ? '+' : ''}{formatValue(diff)}
-                                                    </span>
-                                                </>
-                                            )}
-                                        </div>
+                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                    <div className="flex justify-between items-end mb-1">
+                                        <div className="font-bold text-gray-800 dark:text-gray-200 text-sm truncate pr-2 leading-none">{item.name}</div>
+                                        <div className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-none">{formatValue(item.value)}</div>
                                     </div>
-                                    <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                        <div className="h-full rounded-full transition-all duration-500" style={{ width: item.budget > 0 ? `${Math.min(percent, 100)}%` : '0%', backgroundColor: item.color }} />
+                                    <div className="h-1 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: item.color }} />
+                                    </div>
+                                    <div className="flex justify-between items-center text-[11px] leading-none mt-1">
+                                        <span className="text-gray-500 dark:text-gray-400">
+                                            {formatValue(item.budget)}
+                                        </span>
+                                        <span className={`font-medium ${diffColor}`}>
+                                            {diff > 0 ? '+' : ''}{formatValue(Math.abs(diff))}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
