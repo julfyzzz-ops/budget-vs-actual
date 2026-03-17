@@ -65,6 +65,22 @@ export default function App() {
         });
     }
 
+    if (loaded.transactions && loaded.accounts && loaded.rates) {
+        loaded.transactions = loaded.transactions.map(t => {
+            if (t.type === TransactionType.TRANSFER && t.toAccountId && t.toAmount === undefined) {
+                const sourceAccount = loaded.accounts.find(a => a.id === t.accountId);
+                const destAccount = loaded.accounts.find(a => a.id === t.toAccountId);
+                if (sourceAccount && destAccount && sourceAccount.currency !== destAccount.currency) {
+                    const amountInUAH = t.amount * t.exchangeRate;
+                    const destRate = loaded.rates[destAccount.currency] || 1;
+                    const toAmount = amountInUAH / destRate;
+                    return { ...t, toAmount: parseFloat(toAmount.toFixed(2)) };
+                }
+            }
+            return t;
+        });
+    }
+
     setData(loaded);
   }, []);
 
@@ -136,7 +152,7 @@ export default function App() {
     setData(prev => ({
         ...prev,
         accounts: prev.accounts.filter(a => a.id !== id),
-        transactions: prev.transactions.filter(t => t.accountId !== id)
+        transactions: prev.transactions.filter(t => t.accountId !== id && t.toAccountId !== id)
     }));
   };
 
