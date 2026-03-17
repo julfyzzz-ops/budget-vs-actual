@@ -30,6 +30,8 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
   const [usdRate, setUsdRate] = useState('');
   const [eurRate, setEurRate] = useState('');
 
+  const [downloadUrl, setDownloadUrl] = useState<string>('');
+
   useEffect(() => {
       if (isOpen && currentData.rates) {
           setUsdRate(currentData.rates[Currency.USD]?.toString() || '');
@@ -37,10 +39,19 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
       }
   }, [isOpen, currentData]);
 
-  if (!isOpen) return null;
-
   const exportString = getExportDataString(currentData);
   const fileName = getExportFileName();
+
+  useEffect(() => {
+      if (activeTab === 'export') {
+          const blob = new Blob([exportString], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          setDownloadUrl(url);
+          return () => URL.revokeObjectURL(url);
+      }
+  }, [activeTab, exportString]);
+
+  if (!isOpen) return null;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(exportString).then(() => {
@@ -190,7 +201,13 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
                 <div className="space-y-4">
                     <p className="text-sm text-gray-500">Збережіть файл для резервного копіювання.</p>
                     <div className="grid grid-cols-2 gap-3">
-                        <Button variant="secondary" onClick={handleDownload}><Download size={16} /> Файл</Button>
+                        <a 
+                            href={downloadUrl}
+                            download={fileName}
+                            className="flex items-center justify-center gap-2 py-2 px-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-700 rounded-lg font-medium transition-all active:scale-95 text-sm"
+                        >
+                            <Download size={16} /> Файл
+                        </a>
                         <Button variant="secondary" onClick={handleShare}><Share2 size={16} /> Поділитись</Button>
                     </div>
                     <div className="relative">

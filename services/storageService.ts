@@ -58,6 +58,8 @@ export const triggerBrowserDownload = (jsonString: string, fileName: string) => 
 export const shareData = async (jsonString: string, fileName: string): Promise<boolean> => {
     if (!navigator.share) return false;
 
+    let shared = false;
+
     try {
         const file = new File([jsonString], fileName, { type: "application/json" });
         const shareData = {
@@ -68,22 +70,27 @@ export const shareData = async (jsonString: string, fileName: string): Promise<b
 
         if (navigator.canShare && navigator.canShare(shareData)) {
             await navigator.share(shareData);
-            return true;
-        } else {
-            // Fallback to text if file sharing is not supported
+            shared = true;
+        }
+    } catch (e: any) {
+        console.warn("File sharing failed, trying text", e);
+        if (e.name === 'AbortError') return true;
+    }
+
+    if (!shared) {
+        try {
             await navigator.share({
                 title: 'Резервна копія (JSON)',
                 text: jsonString
             });
-            return true;
+            shared = true;
+        } catch (e: any) {
+            console.warn("Text sharing failed", e);
+            if (e.name === 'AbortError') return true;
         }
-    } catch (e: any) {
-        console.warn("Sharing failed", e);
-        // If the user simply closed the share sheet, it throws an AbortError.
-        // We return true so we don't show an error alert.
-        if (e.name === 'AbortError') return true;
-        return false;
     }
+
+    return shared;
 };
 
 export const importDataFromFile = (file: File): Promise<AppData> => {
