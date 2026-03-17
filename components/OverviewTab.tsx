@@ -85,8 +85,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
       totalActual: number, 
       totalBudget: number,
       HeaderIcon: React.ElementType,
-      headerColorClass: string
+      headerColorClass: string,
+      isIncome: boolean
   ) => {
+      const totalDiff = totalActual - totalBudget;
+      let totalDiffColor = 'text-gray-900 dark:text-gray-300';
+      if (totalBudget > 0) {
+          if (isIncome && totalDiff > 0) totalDiffColor = 'text-emerald-500';
+          else if (!isIncome && totalDiff > 0) totalDiffColor = 'text-red-500';
+      }
+
       return (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden mb-6 animate-fade-in transition-colors">
             <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/30">
@@ -108,6 +116,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
                             <span className="text-gray-900 dark:text-gray-300 text-lg font-bold">
                                 {formatValue(totalBudget)}
                             </span>
+                            <span className="text-gray-400 dark:text-gray-600 mx-1 text-lg font-light">/</span>
+                            <span className={`text-lg font-bold ${totalDiffColor}`}>
+                                {totalDiff > 0 ? '+' : ''}{formatValue(totalDiff)}
+                            </span>
                         </>
                     )}
                </div>
@@ -116,6 +128,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
             <div className="divide-y divide-gray-50 dark:divide-gray-700">
                 {data.map((item) => {
                     const percent = item.budget > 0 ? (item.value / item.budget) * 100 : 0;
+                    const diff = item.value - item.budget;
+                    let diffColor = 'text-gray-900 dark:text-gray-300';
+                    if (item.budget > 0) {
+                        if (isIncome && diff > 0) diffColor = 'text-emerald-500';
+                        else if (!isIncome && diff > 0) diffColor = 'text-red-500';
+                    }
+
                     return (
                         <div 
                           key={item.id} 
@@ -129,12 +148,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-center mb-1">
                                         <div className="font-bold text-gray-800 dark:text-gray-200 text-sm truncate pr-2">{item.name}</div>
-                                        <div className="text-right whitespace-nowrap">
+                                        <div className="text-right whitespace-nowrap flex items-center justify-end">
                                             <span className="font-bold text-gray-900 dark:text-gray-100 text-sm">{formatValue(item.value)}</span>
                                             {item.budget > 0 && (
                                                 <>
                                                     <span className="text-gray-400 dark:text-gray-600 mx-1 text-sm font-light">/</span>
                                                     <span className="text-gray-900 dark:text-gray-300 font-bold text-sm">{formatValue(item.budget)}</span>
+                                                    <span className="text-gray-400 dark:text-gray-600 mx-1 text-sm font-light">/</span>
+                                                    <span className={`font-bold text-sm ${diffColor}`}>
+                                                        {diff > 0 ? '+' : ''}{formatValue(diff)}
+                                                    </span>
                                                 </>
                                             )}
                                         </div>
@@ -175,8 +198,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
             </div>
         </div>
 
-        {renderCategoryList('Витрати', stats.expenseData, stats.expense, stats.totalBudgetExpense, TrendingDown, 'bg-red-500')}
-        {renderCategoryList('Доходи', stats.incomeData, stats.income, stats.totalBudgetIncome, TrendingUp, 'bg-emerald-500')}
+        {renderCategoryList('Витрати', stats.expenseData, stats.expense, stats.totalBudgetExpense, TrendingDown, 'bg-red-500', false)}
+        {renderCategoryList('Доходи', stats.incomeData, stats.income, stats.totalBudgetIncome, TrendingUp, 'bg-emerald-500', true)}
       </div>
     </div>
   );

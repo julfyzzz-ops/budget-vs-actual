@@ -39,6 +39,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
     const totalTransferOut = sourceTransactions.filter(t => t.type === TransactionType.TRANSFER).reduce((sum, t) => sum + t.amount, 0);
     const totalTransferIn = destTransactions.reduce((sum, t) => {
         if (t.toAmount !== undefined) return sum + t.toAmount;
+        if (t.currency === account.currency) return sum + t.amount;
         const amountInUAH = t.amount * t.exchangeRate;
         const destRate = rates[account.currency] || 1; 
         return sum + (amountInUAH / destRate);
