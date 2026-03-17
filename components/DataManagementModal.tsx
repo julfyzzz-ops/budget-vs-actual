@@ -49,12 +49,9 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
     });
   };
 
-  const handleDownload = async () => {
-      const shared = await shareData(exportString, fileName);
-      if (!shared) {
-          try { triggerBrowserDownload(exportString, fileName); } 
-          catch (e) { alert('Помилка завантаження.'); }
-      }
+  const handleDownload = () => {
+      try { triggerBrowserDownload(exportString, fileName); } 
+      catch (e) { alert('Помилка завантаження.'); }
   };
 
   const handleShare = async () => {
@@ -71,6 +68,27 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
               setImportText('');
           }
       } catch (e) { setImportError('Невірний формат JSON даних'); }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+          try {
+              const json = event.target?.result as string;
+              setImportText(json);
+              setImportError(null);
+          } catch (err) {
+              setImportError('Помилка читання файлу');
+          }
+      };
+      reader.onerror = () => setImportError('Помилка завантаження файлу');
+      reader.readAsText(file);
+      
+      // Reset input so the same file can be selected again if needed
+      e.target.value = '';
   };
 
   const saveRates = () => {
@@ -185,7 +203,21 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
             {activeTab === 'import' && (
                 <div className="space-y-4">
                     <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg border border-yellow-100 dark:border-yellow-800 text-sm text-yellow-800 dark:text-yellow-200 flex gap-2"><AlertCircle size={16} className="shrink-0 mt-0.5" /><span>Заміна всіх даних!</span></div>
-                    <textarea value={importText} onChange={(e) => setImportText(e.target.value)} placeholder='Вставте JSON...' className="w-full h-32 p-3 text-xs font-mono bg-white dark:bg-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 rounded-xl" />
+                    
+                    <div className="flex flex-col gap-3">
+                        <label className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
+                                <Upload size={24} />
+                                <span className="text-sm font-medium">Вибрати файл (.json)</span>
+                            </div>
+                            <input type="file" accept=".json" className="hidden" onChange={handleFileUpload} />
+                        </label>
+                        
+                        <div className="text-center text-xs text-gray-400 font-bold uppercase tracking-wider">Або вставте текст</div>
+                        
+                        <textarea value={importText} onChange={(e) => setImportText(e.target.value)} placeholder='Вставте JSON...' className="w-full h-32 p-3 text-xs font-mono bg-white dark:bg-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 rounded-xl" />
+                    </div>
+
                     {importError && <p className="text-xs text-red-500">{importError}</p>}
                     <Button fullWidth onClick={handleManualImport} disabled={!importText}>Відновити</Button>
                 </div>

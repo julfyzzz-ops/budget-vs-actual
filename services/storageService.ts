@@ -36,53 +36,54 @@ export const getExportFileName = (): string => {
 
 // Attempt to download purely via browser API
 export const triggerBrowserDownload = (jsonString: string, fileName: string) => {
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    try {
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+        console.error("Download failed", e);
+        // Fallback for some environments
+        window.location.href = `data:application/json;charset=utf-8,${encodeURIComponent(jsonString)}`;
+    }
 };
 
 // Robust share function that tries to share as a File first (Android "Save to..."), then as text
 export const shareData = async (jsonString: string, fileName: string): Promise<boolean> => {
-    // 1. Try to share as a physical file (Best for Android "Save to Files" or Messengers)
-    if (navigator.canShare && navigator.share) {
-        try {
-            const file = new File([jsonString], fileName, { type: "application/json" });
-            const shareData = {
-                files: [file],
-                title: 'Резервна копія бюджету',
-                text: 'Файл даних додатку'
-            };
+    if (!navigator.share) return false;
 
-            if (navigator.canShare(shareData)) {
-                await navigator.share(shareData);
-                return true;
-            }
-        } catch (e) {
-            console.warn("File sharing failed, falling back to text", e);
-        }
-    }
+    try {
+        const file = new File([jsonString], fileName, { type: "application/json" });
+        const shareData = {
+            files: [file],
+            title: 'Резервна копія бюджету',
+            text: 'Файл даних додатку'
+        };
 
-    // 2. Fallback: Share as plain text
-    if (navigator.share) {
-        try {
+        if (navigator.canShare && navigator.canShare(shareData)) {
+            await navigator.share(shareData);
+            return true;
+        } else {
+            // Fallback to text if file sharing is not supported
             await navigator.share({
                 title: 'Резервна копія (JSON)',
                 text: jsonString
             });
             return true;
-        } catch (e) {
-            console.warn("Text sharing failed", e);
         }
+    } catch (e: any) {
+        console.warn("Sharing failed", e);
+        // If the user simply closed the share sheet, it throws an AbortError.
+        // We return true so we don't show an error alert.
+        if (e.name === 'AbortError') return true;
+        return false;
     }
-
-    return false;
 };
 
 export const importDataFromFile = (file: File): Promise<AppData> => {
