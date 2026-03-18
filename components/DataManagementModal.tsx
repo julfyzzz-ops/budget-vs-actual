@@ -12,6 +12,7 @@ interface DataManagementModalProps {
   onImport: (data: AppData) => void;
   onUpdateRates: (rates: Record<string, number>) => void;
   onUpdateSettings: (settings: UserSettings) => void;
+  onTestNotification?: () => void;
 }
 
 export const DataManagementModal: React.FC<DataManagementModalProps> = ({ 
@@ -20,9 +21,10 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
   currentData, 
   onImport,
   onUpdateRates,
-  onUpdateSettings
+  onUpdateSettings,
+  onTestNotification
 }) => {
-  const [activeTab, setActiveTab] = useState<'rates' | 'appearance' | 'export' | 'import'>('rates');
+  const [activeTab, setActiveTab] = useState<'rates' | 'appearance' | 'rules' | 'export' | 'import'>('rates');
   const [copyStatus, setCopyStatus] = useState(false);
   const [importText, setImportText] = useState('');
   const [importError, setImportError] = useState<string | null>(null);
@@ -32,6 +34,14 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
 
   const [downloadUrl, setDownloadUrl] = useState<string>('');
   const [debugLog, setDebugLog] = useState<string>('');
+
+  const [isAddingAccountRule, setIsAddingAccountRule] = useState(false);
+  const [newAccountRuleKeyword, setNewAccountRuleKeyword] = useState('');
+  const [newAccountRuleAccountId, setNewAccountRuleAccountId] = useState('');
+
+  const [isAddingCategoryRule, setIsAddingCategoryRule] = useState(false);
+  const [newCategoryRuleKeyword, setNewCategoryRuleKeyword] = useState('');
+  const [newCategoryRuleCategoryId, setNewCategoryRuleCategoryId] = useState('');
 
   useEffect(() => {
       if (isOpen && currentData.rates) {
@@ -142,6 +152,7 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
         <div className="flex p-2 gap-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 overflow-x-auto no-scrollbar">
             <button onClick={() => setActiveTab('rates')} className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs whitespace-nowrap transition-colors ${activeTab === 'rates' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800'}`}>Курси</button>
             <button onClick={() => setActiveTab('appearance')} className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs whitespace-nowrap transition-colors ${activeTab === 'appearance' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800'}`}>Вигляд</button>
+            <button onClick={() => setActiveTab('rules')} className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs whitespace-nowrap transition-colors ${activeTab === 'rules' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800'}`}>Правила</button>
             <button onClick={() => setActiveTab('export')} className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs whitespace-nowrap transition-colors ${activeTab === 'export' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800'}`}>Експорт</button>
             <button onClick={() => setActiveTab('import')} className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs whitespace-nowrap transition-colors ${activeTab === 'import' ? 'bg-white dark:bg-gray-800 text-primary shadow-sm' : 'text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800'}`}>Імпорт</button>
         </div>
@@ -211,6 +222,154 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
                                 </div>
                                 {currentData.settings.numberFormat === 'decimal' && <Check size={20} />}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'rules' && (
+                <div className="space-y-6">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Правила для автоматичного розпізнавання транзакцій з банківських сповіщень.</p>
+                    
+                    {onTestNotification && (
+                        <Button variant="secondary" fullWidth onClick={onTestNotification} className="bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40 border-blue-200 dark:border-blue-800">
+                            Тестувати розпізнавання
+                        </Button>
+                    )}
+
+                    <div>
+                        <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-3">Рахунки (Пошук по тексту)</h3>
+                        <div className="space-y-2">
+                            {(currentData.accountRules || []).map(rule => {
+                                const account = currentData.accounts.find(a => a.id === rule.accountId);
+                                return (
+                                    <div key={rule.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                                        <div>
+                                            <div className="text-sm font-bold text-gray-800 dark:text-gray-200">"{rule.keyword}"</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">Рахунок: {account?.name || 'Невідомо'}</div>
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                const newRules = (currentData.accountRules || []).filter(r => r.id !== rule.id);
+                                                onImport({ ...currentData, accountRules: newRules });
+                                            }}
+                                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                            
+                            {isAddingAccountRule ? (
+                                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Ключове слово (напр. 'Картка *1234')" 
+                                        value={newAccountRuleKeyword}
+                                        onChange={e => setNewAccountRuleKeyword(e.target.value)}
+                                        className="w-full p-2 text-sm bg-gray-50 dark:bg-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    />
+                                    <select 
+                                        value={newAccountRuleAccountId}
+                                        onChange={e => setNewAccountRuleAccountId(e.target.value)}
+                                        className="w-full p-2 text-sm bg-gray-50 dark:bg-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    >
+                                        <option value="" disabled>Оберіть рахунок</option>
+                                        {currentData.accounts.map(a => (
+                                            <option key={a.id} value={a.id}>{a.name}</option>
+                                        ))}
+                                    </select>
+                                    <div className="flex gap-2">
+                                        <Button 
+                                            fullWidth 
+                                            disabled={!newAccountRuleKeyword || !newAccountRuleAccountId}
+                                            onClick={() => {
+                                                const newRule = { id: Date.now().toString(), keyword: newAccountRuleKeyword, accountId: newAccountRuleAccountId };
+                                                onImport({ ...currentData, accountRules: [...(currentData.accountRules || []), newRule] });
+                                                setIsAddingAccountRule(false);
+                                                setNewAccountRuleKeyword('');
+                                                setNewAccountRuleAccountId('');
+                                            }}
+                                        >
+                                            Зберегти
+                                        </Button>
+                                        <Button variant="secondary" fullWidth onClick={() => setIsAddingAccountRule(false)}>Скасувати</Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Button variant="secondary" fullWidth onClick={() => setIsAddingAccountRule(true)}>
+                                    + Додати правило рахунку
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 className="font-bold text-gray-700 dark:text-gray-200 mb-3">Категорії (Пошук по тексту)</h3>
+                        <div className="space-y-2">
+                            {(currentData.categoryRules || []).map(rule => {
+                                const category = currentData.categories.find(c => c.id === rule.categoryId);
+                                return (
+                                    <div key={rule.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700">
+                                        <div>
+                                            <div className="text-sm font-bold text-gray-800 dark:text-gray-200">"{rule.keyword}"</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">Категорія: {category?.name || 'Невідомо'}</div>
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                const newRules = (currentData.categoryRules || []).filter(r => r.id !== rule.id);
+                                                onImport({ ...currentData, categoryRules: newRules });
+                                            }}
+                                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                            
+                            {isAddingCategoryRule ? (
+                                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 space-y-3">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Ключове слово (напр. 'Сільпо')" 
+                                        value={newCategoryRuleKeyword}
+                                        onChange={e => setNewCategoryRuleKeyword(e.target.value)}
+                                        className="w-full p-2 text-sm bg-gray-50 dark:bg-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    />
+                                    <select 
+                                        value={newCategoryRuleCategoryId}
+                                        onChange={e => setNewCategoryRuleCategoryId(e.target.value)}
+                                        className="w-full p-2 text-sm bg-gray-50 dark:bg-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                                    >
+                                        <option value="" disabled>Оберіть категорію</option>
+                                        {currentData.categories.map(c => (
+                                            <option key={c.id} value={c.id}>{c.name}</option>
+                                        ))}
+                                    </select>
+                                    <div className="flex gap-2">
+                                        <Button 
+                                            fullWidth 
+                                            disabled={!newCategoryRuleKeyword || !newCategoryRuleCategoryId}
+                                            onClick={() => {
+                                                const newRule = { id: Date.now().toString(), keyword: newCategoryRuleKeyword, categoryId: newCategoryRuleCategoryId };
+                                                onImport({ ...currentData, categoryRules: [...(currentData.categoryRules || []), newRule] });
+                                                setIsAddingCategoryRule(false);
+                                                setNewCategoryRuleKeyword('');
+                                                setNewCategoryRuleCategoryId('');
+                                            }}
+                                        >
+                                            Зберегти
+                                        </Button>
+                                        <Button variant="secondary" fullWidth onClick={() => setIsAddingCategoryRule(false)}>Скасувати</Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Button variant="secondary" fullWidth onClick={() => setIsAddingCategoryRule(true)}>
+                                    + Додати правило категорії
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>

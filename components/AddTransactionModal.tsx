@@ -13,10 +13,11 @@ interface AddTransactionModalProps {
   categories: Category[];
   initialData?: Transaction;
   rates?: Record<string, number>;
+  isFromNotification?: boolean;
 }
 
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
-  isOpen, onClose, onSave, accounts, categories, initialData, rates
+  isOpen, onClose, onSave, accounts, categories, initialData, rates, isFromNotification
 }) => {
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [amount, setAmount] = useState('');
@@ -171,7 +172,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       type
     };
 
-    onSave(initialData ? { ...transactionData, id: initialData.id } : transactionData);
+    onSave(initialData && !isFromNotification ? { ...transactionData, id: initialData.id } : transactionData);
     onClose();
   };
 
@@ -192,7 +193,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
       <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[95vh] transition-colors">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{initialData ? 'Редагувати' : 'Нова транзакція'}</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+            {isFromNotification ? 'Нова зі сповіщення' : (initialData ? 'Редагувати' : 'Нова транзакція')}
+          </h2>
           <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600">
             <X size={20} />
           </button>

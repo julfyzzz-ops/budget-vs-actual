@@ -58,12 +58,26 @@ export interface Transaction {
   type: TransactionType;
 }
 
+export interface CategoryRule {
+  id: string;
+  keyword: string;
+  categoryId: string;
+}
+
+export interface AccountRule {
+  id: string;
+  keyword: string;
+  accountId: string;
+}
+
 export interface AppData {
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
   rates: Record<string, number>;
   settings: UserSettings;
+  categoryRules?: CategoryRule[];
+  accountRules?: AccountRule[];
 }
 
 export const BASE_CURRENCY = Currency.UAH;

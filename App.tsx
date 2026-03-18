@@ -4,6 +4,7 @@ import { LayoutDashboard, List, Wallet, Plus, Settings, Calculator } from 'lucid
 import { AppData, Transaction, Account, Category, UserSettings, TransactionType } from './types';
 import { INITIAL_DATA } from './constants';
 import { loadFromStorage, saveToStorage } from './services/storageService';
+import { parseNotification } from './services/notificationParser';
 import { OverviewTab } from './components/OverviewTab';
 import { TransactionList, TransactionFilters } from './components/TransactionList';
 import { AccountsTab } from './components/AccountsTab';
@@ -30,6 +31,7 @@ export default function App() {
   const [editingCategory, setEditingCategory] = useState<Category | undefined>(undefined);
   const [editingCategoryDate, setEditingCategoryDate] = useState<Date>(new Date());
   const [editingTransaction, setEditingTransaction] = useState<Transaction | undefined>(undefined);
+  const [isFromNotification, setIsFromNotification] = useState(false);
   
   useEffect(() => {
     const loaded = loadFromStorage();
@@ -114,6 +116,7 @@ export default function App() {
 
   const openEditTransaction = (t: Transaction) => {
       setEditingTransaction(t);
+      setIsFromNotification(false);
       setIsTransactionModalOpen(true);
   };
 
@@ -244,6 +247,35 @@ export default function App() {
     setActiveTab('transactions');
   };
 
+  const handleTestNotification = () => {
+    const title = window.prompt('Введіть заголовок сповіщення (напр. "Monobank"):') || 'Monobank';
+    const text = window.prompt('Введіть текст сповіщення (напр. "Покупка 150.00 UAH, Сільпо. Баланс 1000 UAH"):');
+    
+    if (!text) return;
+
+    const parsed = parseNotification(title, text, data);
+    if (parsed) {
+        // Create a temporary transaction object
+        const tempTransaction: Transaction = {
+            id: 'temp-' + Date.now(),
+            date: new Date().toISOString(),
+            amount: parsed.amount,
+            currency: parsed.currency,
+            exchangeRate: 1, // Will be updated in modal if needed
+            accountId: parsed.accountId || '',
+            categoryId: parsed.categoryId || '',
+            type: parsed.type,
+            note: parsed.description
+        };
+        setEditingTransaction(tempTransaction);
+        setIsFromNotification(true);
+        setIsTransactionModalOpen(true);
+        setIsDataModalOpen(false); // Close settings if open
+    } else {
+        alert('Не вдалося розпізнати транзакцію з цього тексту.');
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 w-full overflow-hidden relative transition-colors duration-300">
       
@@ -299,6 +331,7 @@ export default function App() {
           <button 
             onClick={() => {
                 setEditingTransaction(undefined);
+                setIsFromNotification(false);
                 setIsTransactionModalOpen(true);
             }}
             className="w-14 h-14 bg-primary rounded-full shadow-lg shadow-emerald-300 dark:shadow-emerald-900/40 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-transform"
@@ -346,6 +379,7 @@ export default function App() {
         categories={data.categories}
         initialData={editingTransaction}
         rates={data.rates}
+        isFromNotification={isFromNotification}
       />
 
       <AccountModal 
@@ -370,6 +404,7 @@ export default function App() {
         onImport={handleDataImport}
         onUpdateRates={handleUpdateRates}
         onUpdateSettings={handleUpdateSettings}
+        onTestNotification={handleTestNotification}
       />
     </div>
   );
