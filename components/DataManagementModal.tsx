@@ -71,8 +71,14 @@ export const DataManagementModal: React.FC<DataManagementModalProps> = ({
       try {
           const result = await shareData(exportString, fileName);
           setDebugLog(result.log);
+          
+          // If native share fails, fallback to email
           if (!result.success) {
-              alert('Поділитися не вдалося. Дивіться лог нижче.');
+              setDebugLog(prev => prev + "\nNative share failed. Falling back to email...");
+              const subject = encodeURIComponent("Резервна копія бюджету");
+              const body = encodeURIComponent("Файл даних у форматі JSON:\n\n" + exportString);
+              // We use window.location.href instead of window.open because popups are often blocked in WebViews
+              window.location.href = `mailto:?subject=${subject}&body=${body}`;
           }
       } catch (e: any) {
           setDebugLog(`Unexpected error: ${e.message}`);
