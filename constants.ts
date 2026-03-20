@@ -31,7 +31,5 @@ export const INITIAL_DATA: AppData = {
   settings: {
     numberFormat: 'decimal',
     theme: 'light'
-  },
-  categoryRules: [],
-  accountRules: []
+  }
 };
