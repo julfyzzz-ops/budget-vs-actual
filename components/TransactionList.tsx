@@ -55,7 +55,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
-      const tDate = new Date(t.date);
+      let tDate = new Date();
+      if (t.date && typeof t.date === 'string') {
+        const parsed = new Date(t.date);
+        if (!isNaN(parsed.getTime())) tDate = parsed;
+      }
       const sameMonth = tDate.getMonth() === filterMonth.getMonth() && tDate.getFullYear() === filterMonth.getFullYear();
       if (!sameMonth) return false;
       if (filterAccountId && t.accountId !== filterAccountId && t.toAccountId !== filterAccountId) return false;
@@ -65,13 +69,18 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   }, [transactions, filterMonth, filterAccountId, filterCategoryId]);
 
   const sortedTransactions = useMemo(() => {
-    return [...filteredTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return [...filteredTransactions].sort((a, b) => {
+      const timeA = (a.date && typeof a.date === 'string') ? new Date(a.date).getTime() : 0;
+      const timeB = (b.date && typeof b.date === 'string') ? new Date(b.date).getTime() : 0;
+      return (Number.isNaN(timeB) ? 0 : timeB) - (Number.isNaN(timeA) ? 0 : timeA);
+    });
   }, [filteredTransactions]);
 
   const grouped = useMemo(() => {
     const groups: { [key: string]: Transaction[] } = {};
     sortedTransactions.forEach(t => {
-      const dateKey = t.date.split('T')[0];
+      const dateStr = (t.date && typeof t.date === 'string') ? t.date : new Date().toISOString();
+      const dateKey = dateStr.includes('T') ? dateStr.split('T')[0] : (dateStr.split(' ')[0] || dateStr);
       if (!groups[dateKey]) groups[dateKey] = [];
       groups[dateKey].push(t);
     });
@@ -81,25 +90,40 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const formatValue = (val: number) => {
     if (settings.numberFormat === 'incognito') {
       const emojis = ['🙈', '🙉', '🙊', '🤐', '🤫', '👀', '👻', '🥸', '😶‍🌫️', '😸'];
-      const strVal = Math.abs(Math.trunc(val)).toString();
+      const strVal = Math.abs(Math.trunc(val || 0)).toString();
       const emojiStr = strVal.split('').map(d => emojis[Number(d) || 0]).join('');
       return val < 0 ? '-' + emojiStr : emojiStr;
     }
     const isInteger = settings.numberFormat === 'integer';
-    return val.toLocaleString('uk-UA', {
-        minimumFractionDigits: isInteger ? 0 : 2,
-        maximumFractionDigits: isInteger ? 0 : 2
-    });
+    try {
+      return (val || 0).toLocaleString('uk-UA', {
+          minimumFractionDigits: isInteger ? 0 : 2,
+          maximumFractionDigits: isInteger ? 0 : 2
+      });
+    } catch(e) {
+      return (val || 0).toFixed(isInteger ? 0 : 2);
+    }
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    if (date.toDateString() === today.toDateString()) return t('today');
-    return date.toLocaleDateString(t('locale') as string || 'uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
+      const today = new Date();
+      if (date.toDateString() === today.toDateString()) return t('today') || 'Сьогодні';
+      return date.toLocaleDateString(t('locale') as string || 'uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
+    } catch(e) {
+      return dateString;
+    }
   };
 
-  const monthLabel = filterMonth.toLocaleDateString(t('locale') as string || 'uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
+  let monthLabel = '';
+  try {
+    monthLabel = filterMonth.toLocaleDateString(t('locale') as string || 'uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
+  } catch(e) {
+    const months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+    monthLabel = `${months[filterMonth.getMonth()]}.${filterMonth.getFullYear()}`;
+  }
 
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors relative">

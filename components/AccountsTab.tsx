@@ -1,7 +1,7 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Account, AccountType, Currency, Transaction, TransactionType, UserSettings } from '../types';
-import { Lock, LockOpen, Trash2, Pencil, Plus, Banknote, ArrowUp, ArrowDown, Eye, EyeOff, Wallet, PiggyBank, CreditCard, Settings } from 'lucide-react';
+import { Lock, LockOpen, Trash2, Pencil, Plus, Banknote, ArrowUp, ArrowDown, Eye, EyeOff, Wallet, PiggyBank, CreditCard, Settings, DownloadCloud } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 import { useTranslation } from '../i18n';
 
@@ -24,6 +24,29 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isEditMode, setIsEditMode] = useState(false);
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    // Check if the prompt is already deferred
+    // @ts-ignore
+    if (window.deferredPrompt) {
+        setCanInstall(true);
+    }
+    const handleInstallAvailable = () => setCanInstall(true);
+    window.addEventListener('pwa-install-available', handleInstallAvailable);
+    return () => window.removeEventListener('pwa-install-available', handleInstallAvailable);
+  }, []);
+
+  const handleInstallClick = async () => {
+    // @ts-ignore
+    const promptEvent = window.deferredPrompt;
+    if (!promptEvent) return;
+    promptEvent.prompt();
+    const result = await promptEvent.userChoice;
+    // @ts-ignore
+    window.deferredPrompt = null;
+    setCanInstall(false);
+  };
 
   const formatValue = (val: number) => {
     if (settings.numberFormat === 'incognito') {
@@ -161,10 +184,17 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
         {/* Fixed Header Section (Empty Card + Settings) */}
         <div className="flex-none px-4 pt-2 pb-2 bg-gray-50 dark:bg-gray-900 z-30 relative">
             <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
-                 <div className="flex-1"></div> {/* Spacer to push settings to right */}
-                 <button onClick={onOpenSettings} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors">
-                    <Settings size={24} />
-                </button>
+                 <div className="flex-1"></div>
+                 <div className="flex items-center gap-1">
+                     {canInstall && (
+                        <button onClick={handleInstallClick} className="p-2 bg-emerald-50 dark:bg-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-full text-emerald-600 dark:text-emerald-400 transition-colors mr-1">
+                            <DownloadCloud size={20} />
+                        </button>
+                     )}
+                     <button onClick={onOpenSettings} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors">
+                        <Settings size={24} />
+                    </button>
+                 </div>
             </div>
         </div>
 
