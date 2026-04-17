@@ -55,7 +55,7 @@ export const triggerBrowserDownload = (jsonString: string, fileName: string) => 
 };
 
 // Robust share function that tries to share as a File first (Android "Save to..."), then as text
-export const shareData = async (jsonString: string, fileName: string): Promise<{success: boolean, log: string}> => {
+export const shareData = async (jsonString: string, fileName: string, options?: { fileTitle?: string, fileText?: string, textTitle?: string }): Promise<{success: boolean, log: string}> => {
     let log = `navigator.share exists: ${!!navigator.share}\n`;
     if (!navigator.share) return { success: false, log: log + "Share API is not supported in this WebView." };
 
@@ -63,16 +63,16 @@ export const shareData = async (jsonString: string, fileName: string): Promise<{
 
     try {
         const file = new File([jsonString], fileName, { type: "application/json" });
-        const shareData = {
+        const shareDataObj = {
             files: [file],
-            title: 'Резервна копія бюджету',
-            text: 'Файл даних додатку'
+            title: options?.fileTitle || 'Budget Backup',
+            text: options?.fileText || 'App data file'
         };
 
         log += `navigator.canShare exists: ${!!navigator.canShare}\n`;
-        if (navigator.canShare && navigator.canShare(shareData)) {
+        if (navigator.canShare && navigator.canShare(shareDataObj)) {
             log += "canShare(file) is true. Attempting file share...\n";
-            await navigator.share(shareData);
+            await navigator.share(shareDataObj);
             shared = true;
             log += "File share successful.\n";
         } else {
@@ -87,7 +87,7 @@ export const shareData = async (jsonString: string, fileName: string): Promise<{
         try {
             log += "Attempting text share fallback...\n";
             await navigator.share({
-                title: 'Резервна копія (JSON)',
+                title: options?.textTitle || 'Backup (JSON)',
                 text: jsonString
             });
             shared = true;

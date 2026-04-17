@@ -4,6 +4,7 @@ import { Account, AccountType, Currency } from '../types';
 import { Button } from './ui/Button';
 import { X } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
+import { useTranslation } from '../i18n';
 
 interface AccountModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ const COLORS = ['#10b981', '#3b82f6', '#ef4444', '#f97316', '#8b5cf6', '#ec4899'
 const ACCOUNT_ICONS = ['wallet', 'credit-card', 'banknote', 'landmark', 'piggy-bank', 'coins', 'vault', 'briefcase'];
 
 export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onSave, initialData }) => {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState<Currency>(Currency.UAH);
   const [initialBalance, setInitialBalance] = useState('0');
@@ -60,46 +62,46 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
       <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[90vh] transition-colors">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{initialData ? 'Редагувати' : 'Новий рахунок'}</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{initialData ? t('editAccount') : t('addAccount')}</h2>
           <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600"><X size={20} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Назва</label>
-            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder="Назва рахунку" />
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('name')}</label>
+            <input type="text" required value={name} onChange={(e) => setName(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder={t('accountNamePlaceholder')} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Валюта</label>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('currency')}</label>
               <select value={currency} onChange={(e) => { setCurrency(e.target.value as Currency); if (e.target.value === Currency.UAH) setCurrentRate('1'); }} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary">
                 {Object.values(Currency).map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Тип</label>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('type')}</label>
               <select value={type} onChange={(e) => setType(e.target.value as AccountType)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary">
-                <option value={AccountType.CURRENT}>Поточний</option>
-                <option value={AccountType.SAVINGS}>Заощадження</option>
-                <option value={AccountType.DEBT}>Заборгованість</option>
+                <option value={AccountType.CURRENT}>{t('currentAcc')}</option>
+                <option value={AccountType.SAVINGS}>{t('savingsAcc')}</option>
+                <option value={AccountType.DEBT}>{t('debtAcc')}</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Поч. баланс</label>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('initialBalance')}</label>
                 <input type="number" step="0.01" value={initialBalance} onChange={(e) => setInitialBalance(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary" />
              </div>
              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Курс до UAH</label>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('rateToUah')}</label>
                 <input type="number" step="0.01" value={currentRate} disabled={currency === Currency.UAH} onChange={(e) => setCurrentRate(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary disabled:opacity-50" />
              </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Іконка</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('icon')}</label>
             <div className="flex flex-wrap gap-2">
               {ACCOUNT_ICONS.map((iconKey) => (
                 <button key={iconKey} type="button" onClick={() => setIcon(iconKey)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${icon === iconKey ? 'bg-emerald-50 dark:bg-emerald-900/20 text-primary ring-2 ring-primary' : 'bg-gray-50 dark:bg-gray-900 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}><CategoryIcon iconName={iconKey} size={20} /></button>
@@ -108,7 +110,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Колір</label>
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('color')}</label>
             <div className="flex flex-wrap gap-2">
               {COLORS.map(c => (
                 <button key={c} type="button" onClick={() => setColor(c)} className={`w-8 h-8 rounded-full transition-transform hover:scale-110 ${color === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`} style={{ backgroundColor: c }} />
@@ -116,7 +118,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
             </div>
           </div>
 
-          <Button type="submit" fullWidth className="py-3 mt-4">Зберегти</Button>
+          <Button type="submit" fullWidth className="py-3 mt-4">{t('save')}</Button>
         </form>
       </div>
     </div>

@@ -30,6 +30,7 @@ export const INITIAL_DATA: AppData = {
   },
   settings: {
     numberFormat: 'decimal',
-    theme: 'light'
+    theme: 'light',
+    language: 'uk'
   }
 };

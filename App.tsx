@@ -12,6 +12,7 @@ import { AddTransactionModal } from './components/AddTransactionModal';
 import { AccountModal } from './components/AccountModal';
 import { CategoryModal } from './components/CategoryModal';
 import { DataManagementModal } from './components/DataManagementModal';
+import { LanguageProvider, translations } from './i18n';
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -223,7 +224,7 @@ export default function App() {
 
   const handleDataImport = (newData: AppData) => {
       setData(newData);
-      alert('Дані успішно імпортовано!');
+      alert(translations[data.settings.language || 'uk'].importSuccess);
   };
 
   const handleUpdateRates = (newRates: Record<string, number>) => {
@@ -244,7 +245,11 @@ export default function App() {
     setActiveTab('transactions');
   };
 
+  const currentLang = data.settings.language || 'uk';
+  const t = (key: keyof typeof translations.uk) => translations[currentLang][key] || key;
+
   return (
+    <LanguageProvider language={currentLang}>
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 w-full overflow-hidden relative transition-colors duration-300">
       
       <main className="flex-1 overflow-hidden relative w-full pt-safe">
@@ -313,28 +318,28 @@ export default function App() {
             className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'overview' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <LayoutDashboard size={22} strokeWidth={activeTab === 'overview' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Огляд</span>
+            <span className="text-[10px] font-medium">{t('overview')}</span>
         </button>
         <button 
             onClick={() => setActiveTab('transactions')}
             className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'transactions' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <List size={22} strokeWidth={activeTab === 'transactions' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Транз.</span>
+            <span className="text-[10px] font-medium">{t('transactions')}</span>
         </button>
         <button 
             onClick={() => setActiveTab('budget')}
             className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'budget' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <Calculator size={22} strokeWidth={activeTab === 'budget' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Бюджет</span>
+            <span className="text-[10px] font-medium">{t('budget')}</span>
         </button>
         <button 
             onClick={() => setActiveTab('accounts')}
             className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-colors flex-1 ${activeTab === 'accounts' ? 'text-primary' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'}`}
         >
             <Wallet size={22} strokeWidth={activeTab === 'accounts' ? 2.5 : 2} />
-            <span className="text-[10px] font-medium">Рахунки</span>
+            <span className="text-[10px] font-medium">{t('accounts')}</span>
         </button>
       </nav>
 
@@ -372,5 +377,6 @@ export default function App() {
         onUpdateSettings={handleUpdateSettings}
       />
     </div>
+    </LanguageProvider>
   );
 }

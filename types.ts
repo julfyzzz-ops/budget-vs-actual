@@ -18,8 +18,9 @@ export enum AccountType {
 }
 
 export interface UserSettings {
-  numberFormat: 'integer' | 'decimal';
+  numberFormat: 'integer' | 'decimal' | 'incognito';
   theme: 'light' | 'dark';
+  language: 'uk' | 'en';
 }
 
 export interface Account {

@@ -4,6 +4,7 @@ import { Account, Category, Currency, Transaction, TransactionType } from '../ty
 import { Button } from './ui/Button';
 import { X, ArrowRightLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
+import { useTranslation } from '../i18n';
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface AddTransactionModalProps {
 export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   isOpen, onClose, onSave, accounts, categories, initialData, rates
 }) => {
+  const { t } = useTranslation();
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE);
   const [amount, setAmount] = useState('');
   const [toAmount, setToAmount] = useState(''); 
@@ -96,7 +98,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
     const isSell = sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH;
     let calculatedDest = isSell ? srcAmt * r : srcAmt / r;
-    if (Math.abs(calculatedDest - dstAmt) > 1.0) setValidationError('Суми не відповідають вказаному курсу');
+    if (Math.abs(calculatedDest - dstAmt) > 1.0) setValidationError(t('ratesMismatch'));
     else setValidationError(null);
   }, [amount, toAmount, rate, isMultiCurrencyTransfer, sourceAccount, targetAccount]);
 
@@ -154,8 +156,8 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     if (!amount || !accountId) return;
     if (type !== TransactionType.TRANSFER && !categoryId) return;
     if (type === TransactionType.TRANSFER) {
-        if (!toAccountId || accountId === toAccountId) { alert("Оберіть інший рахунок"); return; }
-        if (isMultiCurrencyTransfer && (!toAmount || (validationError && !confirm("Зберегти як є?")))) return;
+        if (!toAccountId || accountId === toAccountId) { alert(t('chooseOtherAcc')); return; }
+        if (isMultiCurrencyTransfer && (!toAmount || (validationError && !confirm(t('saveAsIs'))))) return;
     }
 
     const transactionData = {
@@ -192,39 +194,39 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-0 sm:p-4">
       <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl p-6 overflow-y-auto max-h-[95vh] transition-colors">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{initialData ? 'Редагувати' : 'Нова транзакція'}</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">{initialData ? t('editTransaction') : t('addTransaction')}</h2>
           <button onClick={onClose} className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600">
             <X size={20} />
           </button>
         </div>
 
         <div className="flex p-1 bg-gray-100 dark:bg-gray-900 rounded-lg mb-6">
-            <button type="button" onClick={() => handleTypeChange(TransactionType.EXPENSE)} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${type === TransactionType.EXPENSE ? 'bg-white dark:bg-gray-800 shadow text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>Витрата</button>
-            <button type="button" onClick={() => handleTypeChange(TransactionType.INCOME)} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${type === TransactionType.INCOME ? 'bg-white dark:bg-gray-800 shadow text-emerald-500' : 'text-gray-500 dark:text-gray-400'}`}>Дохід</button>
-            <button type="button" onClick={() => handleTypeChange(TransactionType.TRANSFER)} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${type === TransactionType.TRANSFER ? 'bg-white dark:bg-gray-800 shadow text-blue-500' : 'text-gray-500 dark:text-gray-400'}`}>Трансфер</button>
+            <button type="button" onClick={() => handleTypeChange(TransactionType.EXPENSE)} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${type === TransactionType.EXPENSE ? 'bg-white dark:bg-gray-800 shadow text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>{t('expense')}</button>
+            <button type="button" onClick={() => handleTypeChange(TransactionType.INCOME)} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${type === TransactionType.INCOME ? 'bg-white dark:bg-gray-800 shadow text-emerald-500' : 'text-gray-500 dark:text-gray-400'}`}>{t('income')}</button>
+            <button type="button" onClick={() => handleTypeChange(TransactionType.TRANSFER)} className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${type === TransactionType.TRANSFER ? 'bg-white dark:bg-gray-800 shadow text-blue-500' : 'text-gray-500 dark:text-gray-400'}`}>{t('transfer')}</button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
             {type === TransactionType.TRANSFER ? (
                 <div className="flex items-center gap-2">
                     <div className="flex-1">
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">З рахунку</label>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('fromAcc')}</label>
                         <select value={accountId} onChange={(e) => handleAccountChange(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary text-sm">
                             {visibleAccounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
                         </select>
                     </div>
                     <div className="pt-5 text-gray-400"><ArrowRightLeft size={18} /></div>
                     <div className="flex-1">
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">На рахунок</label>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('toAcc')}</label>
                         <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary text-sm">
-                            <option value="">Оберіть...</option>
+                            <option value="">{t('selectAcc')}</option>
                             {visibleAccounts.filter(a => a.id !== accountId).map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
                         </select>
                     </div>
                 </div>
             ) : (
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Рахунок</label>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('account')}</label>
                     <select value={accountId} onChange={(e) => handleAccountChange(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary">
                         {visibleAccounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
                     </select>
@@ -234,7 +236,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             {isMultiCurrencyTransfer ? (
                 <div className={`p-4 rounded-xl space-y-3 border ${validationError ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800'}`}>
                     <div>
-                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Списання ({sourceAccount?.currency})</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('withdrawal')} ({sourceAccount?.currency})</label>
                         <input type="number" step="0.01" required value={amount} onChange={(e) => handleAmountChange(e.target.value)} className="w-full p-2 rounded-lg bg-white dark:bg-gray-800 dark:text-white border-none shadow-sm" />
                     </div>
                     <div className="flex items-center gap-2">
@@ -243,18 +245,18 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                         <div className="h-px bg-gray-300 dark:bg-gray-700 flex-1"></div>
                     </div>
                     <div>
-                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Зарахування ({targetAccount?.currency})</label>
+                        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('deposit')} ({targetAccount?.currency})</label>
                         <input type="number" step="0.01" required value={toAmount} onChange={(e) => handleToAmountChange(e.target.value)} className="w-full p-2 rounded-lg bg-white dark:bg-gray-800 dark:text-white border-none shadow-sm" />
                     </div>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Сума</label>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('amount')}</label>
                         <input type="number" step="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary text-lg font-bold" placeholder="0.00" />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Валюта</label>
+                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('currency')}</label>
                         <div className="w-full p-3 bg-gray-100 dark:bg-gray-700 rounded-xl text-gray-600 dark:text-gray-300 font-bold">{currency}</div>
                     </div>
                 </div>
@@ -262,7 +264,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
             {type !== TransactionType.TRANSFER && (
                 <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Категорія</label>
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('category')}</label>
                     <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto no-scrollbar">
                         {filteredCategories.map(c => (
                             <button key={c.id} type="button" onClick={() => setCategoryId(c.id)} className={`p-2 rounded-lg text-xs border transition-all flex flex-col items-center gap-1 ${categoryId === c.id ? 'border-primary bg-emerald-50 dark:bg-emerald-900/20 text-primary font-bold' : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
@@ -275,16 +277,16 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             )}
 
             <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Дата</label>
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('date')}</label>
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary" />
             </div>
 
             <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Примітка</label>
-                <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder="Додаткова інформація" />
+                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('note')}</label>
+                <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder={t('notePlaceholder')} />
             </div>
 
-            <Button type="submit" fullWidth className="py-4 mt-4 text-lg">Зберегти</Button>
+            <Button type="submit" fullWidth className="py-4 mt-4 text-lg">{t('save')}</Button>
         </form>
       </div>
     </div>

@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Account, AccountType, Currency, Transaction, TransactionType, UserSettings } from '../types';
 import { Lock, LockOpen, Trash2, Pencil, Plus, Banknote, ArrowUp, ArrowDown, Eye, EyeOff, Wallet, PiggyBank, CreditCard, Settings } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
+import { useTranslation } from '../i18n';
 
 interface AccountsTabProps {
   accounts: Account[];
@@ -21,9 +22,16 @@ interface AccountsTabProps {
 export const AccountsTab: React.FC<AccountsTabProps> = ({ 
   accounts, transactions, rates, onAddAccount, onEditAccount, onDeleteAccount, onSelectAccount, onReorderAccounts, onToggleVisibility, onOpenSettings, settings
 }) => {
+  const { t } = useTranslation();
   const [isEditMode, setIsEditMode] = useState(false);
 
   const formatValue = (val: number) => {
+    if (settings.numberFormat === 'incognito') {
+      const emojis = ['🙈', '🙉', '🙊', '🤐', '🤫', '👀', '👻', '🥸', '😶‍🌫️', '😸'];
+      const strVal = Math.abs(Math.trunc(val)).toString();
+      const emojiStr = strVal.split('').map(d => emojis[Number(d) || 0]).join('');
+      return val < 0 ? '-' + emojiStr : emojiStr;
+    }
     const isInteger = settings.numberFormat === 'integer';
     return val.toLocaleString('uk-UA', {
         minimumFractionDigits: isInteger ? 0 : 2,
@@ -118,7 +126,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                  <div className="flex items-center gap-3 overflow-hidden flex-1">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm ${isHidden ? 'bg-gray-400 dark:bg-gray-600' : ''}`} style={{ backgroundColor: isHidden ? undefined : account.color }}><CategoryIcon iconName={account.icon || 'wallet'} size={20} /></div>
                     <div className="min-w-0">
-                        <div className={`font-bold text-sm truncate pr-2 ${isHidden ? 'text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>{account.name} {isHidden && <span className='text-[10px] font-normal text-gray-400 dark:text-gray-500 ml-2 border border-gray-200 dark:border-gray-700 px-1 rounded'>Приховано</span>}</div>
+                        <div className={`font-bold text-sm truncate pr-2 ${isHidden ? 'text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>{account.name} {isHidden && <span className='text-[10px] font-normal text-gray-400 dark:text-gray-500 ml-2 border border-gray-200 dark:border-gray-700 px-1 rounded'>{t('hidden')}</span>}</div>
                          <div className="text-xs text-gray-400 dark:text-gray-500 font-medium">{account.currency}</div>
                     </div>
                  </div>
@@ -132,7 +140,7 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                              </div>
                              <button onClick={(e) => { e.stopPropagation(); onToggleVisibility(account); }} className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${account.isHidden ? 'bg-gray-100 dark:bg-gray-700 text-gray-500' : 'bg-white dark:bg-gray-800 text-gray-400 hover:text-black dark:hover:text-white border border-gray-100 dark:border-gray-700'}`}>{account.isHidden ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                              <button onClick={(e) => { e.stopPropagation(); onEditAccount(account); }} className="w-8 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full"><Pencil size={14} /></button>
-                             <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Видалити?')) onDeleteAccount(account.id); }} className="w-8 h-8 flex items-center justify-center bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full"><Trash2 size={14} /></button>
+                             <button onClick={(e) => { e.stopPropagation(); if(window.confirm(t('confirmDelete'))) onDeleteAccount(account.id); }} className="w-8 h-8 flex items-center justify-center bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full"><Trash2 size={14} /></button>
                          </div>
                       ) : (
                           <div className="flex flex-col items-end">
@@ -194,9 +202,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                 </div>
             </div>
 
-            {renderAccountGroup('Поточні', AccountType.CURRENT, Wallet, 'bg-blue-500')}
-            {renderAccountGroup('Заощадження', AccountType.SAVINGS, PiggyBank, 'bg-emerald-500')}
-            {renderAccountGroup('Заборгованість', AccountType.DEBT, CreditCard, 'bg-red-500')}
+            {renderAccountGroup(t('currentAccounts'), AccountType.CURRENT, Wallet, 'bg-blue-500')}
+            {renderAccountGroup(t('savingsAccounts'), AccountType.SAVINGS, PiggyBank, 'bg-emerald-500')}
+            {renderAccountGroup(t('debtAccounts'), AccountType.DEBT, CreditCard, 'bg-red-500')}
         </div>
     </div>
   );

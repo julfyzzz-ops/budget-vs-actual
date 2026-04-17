@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Transaction, Category, TransactionType, UserSettings } from '../types';
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
+import { useTranslation } from '../i18n';
 
 interface OverviewTabProps {
   transactions: Transaction[];
@@ -12,11 +13,12 @@ interface OverviewTabProps {
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categories, onCategoryClick, settings }) => {
+  const { t } = useTranslation();
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const periodLabel = useMemo(() => {
-    return currentDate.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
-  }, [currentDate]);
+    return currentDate.toLocaleDateString(t('locale') as string || 'uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
+  }, [currentDate, t]);
 
   const prevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -72,6 +74,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
   const balance = stats.income - stats.expense;
 
   const formatValue = (val: number) => {
+    if (settings.numberFormat === 'incognito') {
+      const emojis = ['🙈', '🙉', '🙊', '🤐', '🤫', '👀', '👻', '🥸', '😶‍🌫️', '😸'];
+      const strVal = Math.abs(Math.trunc(val)).toString();
+      const emojiStr = strVal.split('').map(d => emojis[Number(d) || 0]).join('');
+      return val < 0 ? '-' + emojiStr : emojiStr;
+    }
     const isInteger = settings.numberFormat === 'integer';
     return val.toLocaleString('uk-UA', {
         minimumFractionDigits: isInteger ? 0 : 2,
@@ -161,7 +169,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
                     );
                 })}
                  {data.length === 0 && (
-                    <div className="p-4 text-center text-gray-400 dark:text-gray-600 text-xs italic">Категорії відсутні</div>
+                    <div className="p-4 text-center text-gray-400 dark:text-gray-600 text-xs italic">{t('noCategories')}</div>
                 )}
             </div>
         </div>
@@ -188,8 +196,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ transactions, categori
             </div>
         </div>
 
-        {renderCategoryList('Витрати', stats.expenseData, stats.expense, stats.totalBudgetExpense, TrendingDown, 'bg-red-500', false)}
-        {renderCategoryList('Доходи', stats.incomeData, stats.income, stats.totalBudgetIncome, TrendingUp, 'bg-emerald-500', true)}
+        {renderCategoryList(t('expenses'), stats.expenseData, stats.expense, stats.totalBudgetExpense, TrendingDown, 'bg-red-500', false)}
+        {renderCategoryList(t('incomes'), stats.incomeData, stats.income, stats.totalBudgetIncome, TrendingUp, 'bg-emerald-500', true)}
       </div>
     </div>
   );

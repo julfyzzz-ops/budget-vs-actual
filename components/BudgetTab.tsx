@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { Category, TransactionType, UserSettings } from '../types';
 import { Lock, LockOpen, Plus, Trash2, Pencil, TrendingUp, TrendingDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
+import { useTranslation } from '../i18n';
 
 interface BudgetTabProps {
   categories: Category[];
@@ -16,14 +17,21 @@ interface BudgetTabProps {
 export const BudgetTab: React.FC<BudgetTabProps> = ({ 
   categories, onAddCategory, onEditCategory, onDeleteCategory, onReorderCategories, settings
 }) => {
+  const { t } = useTranslation();
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const periodLabel = useMemo(() => currentDate.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', ''), [currentDate]);
+  const periodLabel = useMemo(() => currentDate.toLocaleDateString(t('locale') as string || 'uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', ''), [currentDate, t]);
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
 
   const formatValue = (val: number) => {
+    if (settings.numberFormat === 'incognito') {
+      const emojis = ['🙈', '🙉', '🙊', '🤐', '🤫', '👀', '👻', '🥸', '😶‍🌫️', '😸'];
+      const strVal = Math.abs(Math.trunc(val)).toString();
+      const emojiStr = strVal.split('').map(d => emojis[Number(d) || 0]).join('');
+      return val < 0 ? '-' + emojiStr : emojiStr;
+    }
     const isInteger = settings.numberFormat === 'integer';
     return val.toLocaleString('uk-UA', {
         minimumFractionDigits: isInteger ? 0 : 2,
@@ -97,7 +105,7 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
                                <button onClick={(e) => { e.stopPropagation(); moveCategory(index, 'down', type); }} disabled={index === group.length - 1} className="w-7 h-7 flex items-center justify-center text-gray-500 disabled:opacity-30 transition-all"><ArrowDown size={14} strokeWidth={2.5} /></button>
                            </div>
                            <button onClick={(e) => { e.stopPropagation(); onEditCategory(category, currentDate); }} className="w-8 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full"><Pencil size={14} /></button>
-                           <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Видалити?')) onDeleteCategory(category.id); }} className="w-8 h-8 flex items-center justify-center bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full"><Trash2 size={14} /></button>
+                           <button onClick={(e) => { e.stopPropagation(); if(window.confirm(t('confirmDelete'))) onDeleteCategory(category.id); }} className="w-8 h-8 flex items-center justify-center bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full"><Trash2 size={14} /></button>
                        </div>
                    )}
                </div>
@@ -154,8 +162,8 @@ export const BudgetTab: React.FC<BudgetTabProps> = ({
                </div>
            </div>
 
-           {renderCategoryGroup(TransactionType.EXPENSE, 'Витрати', TrendingDown, 'bg-red-500')}
-           {renderCategoryGroup(TransactionType.INCOME, 'Доходи', TrendingUp, 'bg-emerald-500')}
+           {renderCategoryGroup(TransactionType.EXPENSE, t('expenses'), TrendingDown, 'bg-red-500')}
+           {renderCategoryGroup(TransactionType.INCOME, t('incomes'), TrendingUp, 'bg-emerald-500')}
         </div>
     </div>
   );

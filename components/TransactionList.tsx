@@ -3,6 +3,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Transaction, Account, Category, TransactionType, UserSettings } from '../types';
 import { Calendar, Search, Trash2, Pencil, Lock, LockOpen, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
+import { useTranslation } from '../i18n';
 
 export interface TransactionFilters {
   accountId?: string;
@@ -24,6 +25,7 @@ interface TransactionListProps {
 export const TransactionList: React.FC<TransactionListProps> = ({ 
   transactions, accounts, categories, onDelete, onEdit, initialFilters, onResetFilters, settings
 }) => {
+  const { t } = useTranslation();
   const [isEditMode, setIsEditMode] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterMonth, setFilterMonth] = useState<Date>(new Date());
@@ -77,6 +79,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   }, [sortedTransactions]);
 
   const formatValue = (val: number) => {
+    if (settings.numberFormat === 'incognito') {
+      const emojis = ['🙈', '🙉', '🙊', '🤐', '🤫', '👀', '👻', '🥸', '😶‍🌫️', '😸'];
+      const strVal = Math.abs(Math.trunc(val)).toString();
+      const emojiStr = strVal.split('').map(d => emojis[Number(d) || 0]).join('');
+      return val < 0 ? '-' + emojiStr : emojiStr;
+    }
     const isInteger = settings.numberFormat === 'integer';
     return val.toLocaleString('uk-UA', {
         minimumFractionDigits: isInteger ? 0 : 2,
@@ -87,11 +95,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const today = new Date();
-    if (date.toDateString() === today.toDateString()) return 'Сьогодні';
-    return date.toLocaleDateString('uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
+    if (date.toDateString() === today.toDateString()) return t('today');
+    return date.toLocaleDateString(t('locale') as string || 'uk-UA', { weekday: 'long', day: 'numeric', month: 'long' });
   };
 
-  const monthLabel = filterMonth.toLocaleDateString('uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
+  const monthLabel = filterMonth.toLocaleDateString(t('locale') as string || 'uk-UA', { month: 'long', year: 'numeric' }).replace(' р.', '');
 
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors relative">
@@ -113,7 +121,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                         <select value={filterAccountId} onChange={(e) => setFilterAccountId(e.target.value)}
                             className="w-full p-2 pl-2 text-xs rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-1 focus:ring-primary outline-none truncate"
                         >
-                            <option value="">Всі рахунки</option>
+                            <option value="">{t('allAccounts')}</option>
                             {accounts.map(a => (<option key={a.id} value={a.id}>{a.name}</option>))}
                         </select>
                     </div>
@@ -121,7 +129,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                         <select value={filterCategoryId} onChange={(e) => setFilterCategoryId(e.target.value)}
                             className="w-full p-2 pl-2 text-xs rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-primary focus:ring-1 focus:ring-primary outline-none truncate"
                         >
-                            <option value="">Всі категорії</option>
+                            <option value="">{t('allCategories')}</option>
                             {categories.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
                         </select>
                     </div>
@@ -162,7 +170,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
             {sortedTransactions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 dark:text-gray-600 text-center">
                     <Search size={48} className="mb-4 opacity-20" />
-                    <p>Транзакцій не знайдено.</p>
+                    <p>{t('noTransactions')}</p>
                 </div>
             ) : (
                 <div className="space-y-4 pt-2">
@@ -201,7 +209,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0 shadow-sm" style={{ backgroundColor: category?.color || '#ccc' }}><CategoryIcon iconName={category?.icon || 'help-circle'} size={20} /></div>
                                     )}
                                     <div className="min-w-0 flex-1">
-                                        <div className="font-semibold text-gray-900 dark:text-gray-100 truncate pr-2 text-sm">{isTransfer ? 'Переказ коштів' : (category?.name || 'Без категорії')}</div>
+                                        <div className="font-semibold text-gray-900 dark:text-gray-100 truncate pr-2 text-sm">{isTransfer ? t('fundsTransfer') : (category?.name || t('uncategorized'))}</div>
                                         <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
                                             {isTransfer ? <span className="truncate flex items-center gap-1">{account?.name} → {toAccount?.name}</span> : <span className="truncate font-medium">{account?.name}</span>}
                                             {t.note && <><span className="shrink-0 text-gray-300 dark:text-gray-700">|</span><span className="italic truncate text-gray-400 dark:text-gray-500">{t.note}</span></>}
@@ -224,7 +232,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                                     {isEditMode && (
                                         <div className="flex items-center gap-2">
                                             <button onClick={(e) => { e.stopPropagation(); onEdit(t); }} className="p-2 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-full"><Pencil size={16} /></button>
-                                            <button onClick={(e) => { e.stopPropagation(); if(window.confirm('Видалити?')) onDelete(t.id); }} className="p-2 bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full"><Trash2 size={16} /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); if(window.confirm(t('confirmDelete'))) onDelete(t.id); }} className="p-2 bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-full"><Trash2 size={16} /></button>
                                         </div>
                                     )}
                                 </div>
