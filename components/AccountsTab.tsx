@@ -40,7 +40,10 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   const handleInstallClick = async () => {
     // @ts-ignore
     const promptEvent = window.deferredPrompt;
-    if (!promptEvent) return;
+    if (!promptEvent) {
+      alert(t('installUnavailable') || 'Установка недоступна. Можливо, додаток вже встановлено, або ваш браузер не підтримує цю функцію (спробуйте відкрити в Chrome).');
+      return;
+    }
     promptEvent.prompt();
     const result = await promptEvent.userChoice;
     // @ts-ignore
@@ -186,11 +189,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
             <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
                  <div className="flex-1"></div>
                  <div className="flex items-center gap-1">
-                     {canInstall && (
-                        <button onClick={handleInstallClick} className="p-2 bg-emerald-50 dark:bg-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-full text-emerald-600 dark:text-emerald-400 transition-colors mr-1">
-                            <DownloadCloud size={20} />
-                        </button>
-                     )}
+                     <button onClick={handleInstallClick} className={`p-2 rounded-full transition-colors mr-1 ${canInstall ? 'bg-emerald-50 dark:bg-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'}`} title={t('installApp') || 'Install App'}>
+                         <DownloadCloud size={20} />
+                     </button>
                      <button onClick={onOpenSettings} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full text-gray-600 dark:text-gray-400 transition-colors">
                         <Settings size={24} />
                     </button>
