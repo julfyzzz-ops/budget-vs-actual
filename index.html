@@ -51,14 +51,15 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icon-192x192.png">
   <link rel="manifest" href="./manifest.json">
-  <meta name="theme-color" content="#10b981">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f9fafb" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111827" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="stylesheet" href="./index.css">
 </head>
-  <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-screen overflow-hidden select-none" style="padding-top: max(env(safe-area-inset-top), 24px); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);">
-    <div id="root" class="h-full w-full flex flex-col"></div>
+  <body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 h-screen overflow-hidden select-none" style="padding-top: max(env(safe-area-inset-top), 0px); padding-bottom: env(safe-area-inset-bottom); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);">
+    <div id="root" class="h-full w-full flex flex-col pt-2"></div>
     <script>
       window.deferredPrompt = null;
       window.addEventListener('beforeinstallprompt', (e) => {

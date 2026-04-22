@@ -252,7 +252,7 @@ export default function App() {
     <LanguageProvider language={currentLang}>
     <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 w-full overflow-hidden relative transition-colors duration-300">
       
-      <main className="flex-1 overflow-hidden relative w-full pt-safe">
+      <main className="flex-1 overflow-hidden relative w-full pt-1">
         {activeTab === 'overview' && (
             <OverviewTab 
                 transactions={data.transactions} 
