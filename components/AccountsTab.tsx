@@ -40,15 +40,30 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
   const handleInstallClick = async () => {
     // @ts-ignore
     const promptEvent = window.deferredPrompt;
-    if (!promptEvent) {
-      alert(t('installUnavailable') || 'Установка недоступна. Можливо, додаток вже встановлено, або ваш браузер не підтримує цю функцію (спробуйте відкрити в Chrome).');
+    
+    // Перевірка на iOS (Apple Devices)
+    // @ts-ignore
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+    if (isIOS) {
+      alert("🍏 На iPhone/iPad автоматичного встановлення не існує.\n\nЩоб встановити:\n1. Натисніть кнопку «Поділитися» (квадрат зі стрілочкою внизу).\n2. Прокрутіть вниз і виберіть «На початковий екран» (Add to Home Screen).");
       return;
     }
+
+    if (!promptEvent) {
+      alert(
+        "❌ АВТОМАТИЧНЕ ВСТАНОВЛЕННЯ БЛОКУЄТЬСЯ:\n\n" +
+        "1️⃣ ВБУДОВАНИЙ БРАУЗЕР (90% випадків):\nЯкщо ви відкрили посилання прямо в Telegram, Instagram чи Viber — натисніть вгорі 'три крапки' та виберіть «Відкрити в Chrome».\n\n" +
+        "2️⃣ ВСТАНОВІТЬ ВРУЧНУ:\nЯкщо ви вже в Chrome, розгорніть головне меню браузера (натисніть ⋮ вгорі) та знайдіть пункт «Додати на головний екран» (або «Встановити додаток»).\n\n" +
+        "3️⃣ ВЖЕ ВСТАНОВЛЕНО:\nМожливо, додаток вже є на вашому пристрої у меню всіх програм."
+      );
+      return;
+    }
+    
     promptEvent.prompt();
     const result = await promptEvent.userChoice;
     // @ts-ignore
     window.deferredPrompt = null;
-    setCanInstall(false);
   };
 
   const formatValue = (val: number) => {
