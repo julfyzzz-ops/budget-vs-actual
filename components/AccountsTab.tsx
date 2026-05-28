@@ -156,6 +156,9 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
           {group.map((account, index) => {
             const rawBalance = getBalance(account);
             const balance = Math.abs(rawBalance) < 0.005 ? 0 : rawBalance;
+            const creditLimit = account.creditLimit || 0;
+            const availableBalance = creditLimit > 0 ? balance + creditLimit : balance;
+            
             const isHidden = !!account.isHidden;
             const rate = rates[account.currency] || 1;
             const balanceInUAH = balance * rate;
@@ -186,7 +189,15 @@ export const AccountsTab: React.FC<AccountsTabProps> = ({
                       ) : (
                           <div className="flex flex-col items-end">
                               <div className={`font-bold text-sm whitespace-nowrap ${balance < 0 ? 'text-red-500 dark:text-red-400' : 'text-gray-900 dark:text-gray-100'}`}>{formatValue(balance)} <span className="text-xs font-normal text-gray-400 dark:text-gray-500 ml-1">{account.currency}</span></div>
-                              {account.currency !== Currency.UAH && (<div className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">{formatValue(balanceInUAH)} UAH</div>)}
+                              {creditLimit > 0 ? (
+                                  <div className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                                      {formatValue(availableBalance)}
+                                  </div>
+                              ) : account.currency !== Currency.UAH ? (
+                                  <div className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                                      {formatValue(balanceInUAH)} UAH
+                                  </div>
+                              ) : null}
                           </div>
                       )}
                  </div>

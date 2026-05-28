@@ -1,10 +1,61 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Account, Category, Currency, Transaction, TransactionType } from '../types';
 import { Button } from './ui/Button';
 import { X, ArrowRightLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import { CategoryIcon } from './CategoryIcon';
 import { useTranslation } from '../i18n';
+
+const safeEvaluate = (expr: string): string => {
+  try {
+      if (!expr) return '';
+      let clean = expr.replace(/,/g, '.').replace(/[^0-9.\-+\/*%()]/g, '');
+      if (!clean || clean.endsWith('+') || clean.endsWith('-') || clean.endsWith('*') || clean.endsWith('/') || clean.endsWith('%')) return '';
+      // eslint-disable-next-line
+      const result = new Function(`return ${clean}`)();
+      if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+          return Number.isInteger(result) ? result.toString() : parseFloat(result.toFixed(2)).toString();
+      }
+  } catch(e) {}
+  return '';
+};
+
+const AmountCalculatorInput: React.FC<{
+  value: string;
+  onChange: (val: string) => void;
+  className?: string;
+  placeholder?: string;
+  autoFocus?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+}> = ({ value, onChange, className, placeholder, autoFocus, onFocus, onBlur, inputRef }) => {
+  const preview = safeEvaluate(value);
+  const showPreview = preview && preview !== value && /[+\-/*%]/.test(value);
+
+  return (
+    <div className="relative w-full">
+      <input
+        ref={inputRef}
+        type="text"
+        inputMode="decimal"
+        required
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        className={`w-full ${className} ${showPreview ? 'pr-16 text-primary' : ''}`}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+      />
+      {showPreview && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium pointer-events-none">
+          = {preview}
+        </span>
+      )}
+    </div>
+  );
+};
 
 interface AddTransactionModalProps {
   isOpen: boolean;
@@ -30,6 +81,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [currency, setCurrency] = useState<Currency>(Currency.UAH);
   const [rate, setRate] = useState('1');
   const [note, setNote] = useState('');
+  const [activeCalcField, setActiveCalcField] = useState<'amount' | 'toAmount' | null>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
+  const toAmountInputRef = useRef<HTMLInputElement>(null);
 
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -104,8 +158,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleAmountChange = (val: string) => {
       setAmount(val);
-      if (isMultiCurrencyTransfer && rate && val) {
-          const s = parseFloat(val);
+      const finalVal = safeEvaluate(val) || val;
+      if (isMultiCurrencyTransfer && rate && finalVal) {
+          const s = parseFloat(finalVal);
           const r = parseFloat(rate);
           if (!isNaN(s) && !isNaN(r) && r !== 0) {
               const isSell = sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH;
@@ -117,9 +172,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleToAmountChange = (val: string) => {
       setToAmount(val);
-      if (isMultiCurrencyTransfer && amount && val) {
-          const s = parseFloat(amount);
-          const d = parseFloat(val);
+      const finalToVal = safeEvaluate(val) || val;
+      const finalAmountVal = safeEvaluate(amount) || amount;
+      if (isMultiCurrencyTransfer && amount && finalToVal) {
+          const s = parseFloat(finalAmountVal);
+          const d = parseFloat(finalToVal);
           if (!isNaN(s) && !isNaN(d) && d !== 0 && s !== 0) {
               const isSell = sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH;
               const newRate = isSell ? d / s : s / d;
@@ -130,8 +187,9 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
 
   const handleRateChange = (val: string) => {
       setRate(val);
+      const finalAmountVal = safeEvaluate(amount) || amount;
       if (isMultiCurrencyTransfer && amount && val) {
-          const s = parseFloat(amount);
+          const s = parseFloat(finalAmountVal);
           const r = parseFloat(val);
           if (!isNaN(s) && !isNaN(r) && r !== 0) {
               const isSell = sourceAccount?.currency !== Currency.UAH && targetAccount?.currency === Currency.UAH;
@@ -160,14 +218,17 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         if (isMultiCurrencyTransfer && (!toAmount || (validationError && !confirm(t('saveAsIs'))))) return;
     }
 
+    const finalAmount = parseFloat(safeEvaluate(amount) || amount);
+    const finalToAmount = toAmount ? parseFloat(safeEvaluate(toAmount) || toAmount) : undefined;
+
     const transactionData = {
       date: new Date(date).toISOString(),
-      amount: parseFloat(amount),
+      amount: finalAmount,
       currency: currency,
       exchangeRate: sourceAccount?.currency !== Currency.UAH ? parseFloat(rate) : 1,
       accountId,
       toAccountId: type === TransactionType.TRANSFER ? toAccountId : undefined,
-      toAmount: (type === TransactionType.TRANSFER && toAmount) ? parseFloat(toAmount) : undefined,
+      toAmount: (type === TransactionType.TRANSFER && finalToAmount) ? finalToAmount : undefined,
       categoryId: type === TransactionType.TRANSFER ? 'transfer' : categoryId,
       note,
       type
@@ -237,7 +298,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                 <div className={`p-4 rounded-xl space-y-3 border ${validationError ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800' : 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800'}`}>
                     <div>
                         <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('withdrawal')} ({sourceAccount?.currency})</label>
-                        <input type="number" step="0.01" required value={amount} onChange={(e) => handleAmountChange(e.target.value)} className="w-full p-2 rounded-lg bg-white dark:bg-gray-800 dark:text-white border-none shadow-sm" />
+                        <AmountCalculatorInput value={amount} onChange={(val) => handleAmountChange(val)} className="p-2 rounded-lg bg-white dark:bg-gray-800 dark:text-white border-none shadow-sm" inputRef={amountInputRef} onFocus={() => setActiveCalcField('amount')} onBlur={() => setTimeout(() => setActiveCalcField(null), 150)} />
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="h-px bg-gray-300 dark:bg-gray-700 flex-1"></div>
@@ -246,19 +307,46 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
                     </div>
                     <div>
                         <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{t('deposit')} ({targetAccount?.currency})</label>
-                        <input type="number" step="0.01" required value={toAmount} onChange={(e) => handleToAmountChange(e.target.value)} className="w-full p-2 rounded-lg bg-white dark:bg-gray-800 dark:text-white border-none shadow-sm" />
+                        <AmountCalculatorInput value={toAmount} onChange={(val) => handleToAmountChange(val)} className="p-2 rounded-lg bg-white dark:bg-gray-800 dark:text-white border-none shadow-sm" inputRef={toAmountInputRef} onFocus={() => setActiveCalcField('toAmount')} onBlur={() => setTimeout(() => setActiveCalcField(null), 150)} />
                     </div>
                 </div>
             ) : (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
                     <div>
                         <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('amount')}</label>
-                        <input type="number" step="0.01" required value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary text-lg font-bold" placeholder="0.00" />
+                        <AmountCalculatorInput value={amount} onChange={setAmount} className="p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary text-lg font-bold" placeholder="0.00" autoFocus inputRef={amountInputRef} onFocus={() => setActiveCalcField('amount')} onBlur={() => setTimeout(() => setActiveCalcField(null), 150)} />
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('currency')}</label>
-                        <div className="w-full p-3 bg-gray-100 dark:bg-gray-700 rounded-xl text-gray-600 dark:text-gray-300 font-bold">{currency}</div>
-                    </div>
+                </div>
+            )}
+
+            {activeCalcField && (
+                <div className="flex gap-2 animate-fade-in bg-gray-50 dark:bg-gray-800 p-2 rounded-xl border border-gray-100 dark:border-gray-700 w-full mb-2">
+                {['+', '-', '*', '/', '%', '='].map((op) => (
+                    <button
+                        key={op}
+                        type="button"
+                        onPointerDown={(e) => {
+                            e.preventDefault();
+                            const val = activeCalcField === 'amount' ? amount : toAmount;
+                            const setter = activeCalcField === 'amount' ? handleAmountChange : handleToAmountChange;
+                            const ref = activeCalcField === 'amount' ? amountInputRef : toAmountInputRef;
+
+                            if (op === '=') {
+                                const exprPrev = safeEvaluate(val);
+                                if (exprPrev) {
+                                    setter(exprPrev);
+                                }
+                                setActiveCalcField(null);
+                                ref.current?.blur();
+                            } else {
+                                setter(val + (op === '*' ? '*' : op));
+                            }
+                        }}
+                        className="flex-1 h-12 bg-white dark:bg-gray-700 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 active:scale-95 transition-all flex items-center justify-center text-xl"
+                    >
+                    {op === '*' ? '×' : op === '/' ? '÷' : op}
+                    </button>
+                ))}
                 </div>
             )}
 

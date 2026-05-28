@@ -33,6 +33,7 @@ export interface Account {
   type: AccountType;
   currentRate: number;
   isHidden?: boolean;
+  creditLimit?: number;
 }
 
 export interface Category {

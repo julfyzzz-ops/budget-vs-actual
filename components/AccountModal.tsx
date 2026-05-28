@@ -21,6 +21,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState<Currency>(Currency.UAH);
   const [initialBalance, setInitialBalance] = useState('0');
+  const [creditLimit, setCreditLimit] = useState('');
   const [type, setType] = useState<AccountType>(AccountType.CURRENT);
   const [color, setColor] = useState(COLORS[0]);
   const [icon, setIcon] = useState('wallet');
@@ -31,6 +32,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
       setName(initialData.name);
       setCurrency(initialData.currency);
       setInitialBalance(initialData.initialBalance.toString());
+      setCreditLimit(initialData.creditLimit ? initialData.creditLimit.toString() : '');
       setType(initialData.type || AccountType.CURRENT);
       setColor(initialData.color);
       setIcon(initialData.icon || 'wallet');
@@ -44,6 +46,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
     setName('');
     setCurrency(Currency.UAH);
     setInitialBalance('0');
+    setCreditLimit('');
     setType(AccountType.CURRENT);
     setColor(COLORS[0]);
     setIcon('wallet');
@@ -52,7 +55,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(initialData ? { ...initialData, name, currency, initialBalance: parseFloat(initialBalance), type, color, icon, currentRate: parseFloat(currentRate) } : { name, currency, initialBalance: parseFloat(initialBalance), type, color, icon, currentRate: parseFloat(currentRate) });
+    const parsedCreditLimit = creditLimit ? parseFloat(creditLimit) : undefined;
+    onSave(initialData ? 
+        { ...initialData, name, currency, initialBalance: parseFloat(initialBalance), creditLimit: parsedCreditLimit, type, color, icon, currentRate: parseFloat(currentRate) } : 
+        { name, currency, initialBalance: parseFloat(initialBalance), creditLimit: parsedCreditLimit, type, color, icon, currentRate: parseFloat(currentRate) }
+    );
     onClose();
   };
 
@@ -98,6 +105,11 @@ export const AccountModal: React.FC<AccountModalProps> = ({ isOpen, onClose, onS
                 <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('rateToUah')}</label>
                 <input type="number" step="0.01" value={currentRate} disabled={currency === Currency.UAH} onChange={(e) => setCurrentRate(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary disabled:opacity-50" />
              </div>
+          </div>
+
+          <div>
+             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('creditLimit')}</label>
+             <input type="number" step="0.01" value={creditLimit} onChange={(e) => setCreditLimit(e.target.value)} className="w-full p-3 bg-gray-50 dark:bg-gray-900 dark:text-white rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder="0.00" />
           </div>
 
           <div>
